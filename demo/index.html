@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 社区餐桌预测引擎 · 即时烹饪场景经营平台</title>
+<style>
+/* ============ 基础重置 ============ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f6f9; --panel:#ffffff; --ink:#1a2332; --ink2:#5a6577; --ink3:#8a95a8;
+  --line:#e6eaf0; --line2:#eef2f7;
+  --brand:#0ea5a4; --brand-d:#0d8b8a; --brand-l:#e6f7f6;
+  --warm:#f97316; --warm-l:#fff3ea;
+  --red:#ef4444; --red-l:#fdeaea;
+  --green:#22c55e; --green-l:#e8f8ee;
+  --amber:#f59e0b; --amber-l:#fef5e7;
+  --blue:#3b82f6; --blue-l:#eaf2fe;
+  --purple:#8b5cf6; --purple-l:#f1ecfe;
+  --shadow:0 1px 3px rgba(20,40,80,.06),0 4px 16px rgba(20,40,80,.05);
+  --shadow-lg:0 8px 32px rgba(20,40,80,.1);
+  --radius:14px;
+}
+html{font-size:14px}
+body{font-family:"PingFang SC","Microsoft YaHei","Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#cdd6e4;border-radius:8px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ============ 顶部栏 ============ */
+.topbar{position:sticky;top:0;z-index:100;background:linear-gradient(110deg,#0e2a3a 0%,#134e4a 55%,#0d8b8a 100%);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:20px;box-shadow:0 4px 20px rgba(13,80,74,.25)}
+.brand{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.brand-logo{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#f97316,#fb923c);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 12px rgba(249,115,22,.4)}
+.brand-text h1{font-size:17px;font-weight:700;letter-spacing:.5px}
+.brand-text p{font-size:11.5px;color:#a7d4d3;font-weight:400;margin-top:1px}
+.scenario-tabs{display:flex;gap:6px;background:rgba(255,255,255,.08);padding:5px;border-radius:11px;flex-wrap:wrap}
+.scenario-tabs button{padding:7px 15px;border-radius:8px;font-size:12.5px;color:#bfe3e1;font-weight:500;transition:.2s;white-space:nowrap}
+.scenario-tabs button:hover{background:rgba(255,255,255,.1);color:#fff}
+.scenario-tabs button.active{background:#fff;color:#0e2a3a;font-weight:600}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+.weather-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);padding:7px 14px;border-radius:10px;font-size:12.5px}
+.weather-chip .w-icon{font-size:18px}
+.gen-btn{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;padding:10px 22px;border-radius:11px;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px;box-shadow:0 4px 14px rgba(249,115,22,.45);transition:.2s}
+.gen-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(249,115,22,.55)}
+.gen-btn:active{transform:translateY(0)}
+.gen-btn .spark{font-size:16px}
+
+/* ============ 主网格 ============ */
+.app{max-width:1640px;margin:0 auto;padding:18px 20px 40px}
+.grid{display:grid;grid-template-columns:340px 1fr 380px;gap:16px;align-items:start}
+.col{display:flex;flex-direction:column;gap:16px}
+
+/* ============ 卡片通用 ============ */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.card-head{padding:14px 16px 10px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--line2)}
+.card-head .h-icon{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.card-head h3{font-size:14px;font-weight:700}
+.card-head .sub{font-size:11px;color:var(--ink3);margin-left:auto;font-weight:400}
+.card-body{padding:14px 16px}
+
+/* ============ 左：态势感知 ============ */
+.sit-item{padding:11px 0;border-bottom:1px dashed var(--line2)}
+.sit-item:last-child{border-bottom:none}
+.sit-label{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--ink2);margin-bottom:6px}
+.sit-label .tag{font-size:10px;padding:2px 7px;border-radius:5px;font-weight:600}
+.tag-warn{background:var(--amber-l);color:#b45309}
+.tag-danger{background:var(--red-l);color:#dc2626}
+.tag-ok{background:var(--green-l);color:#16a34a}
+.tag-info{background:var(--blue-l);color:#2563eb}
+.inv-row{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:5px 0}
+.inv-row .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.inv-row .nm{flex:1;font-weight:500}
+.inv-row .meta{font-size:11px;color:var(--ink3)}
+.inv-bar{height:5px;background:var(--line2);border-radius:4px;margin-top:3px;overflow:hidden}
+.inv-bar i{display:block;height:100%;border-radius:4px}
+.community-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.community-stat{background:var(--line2);border-radius:9px;padding:9px 10px}
+.community-stat .v{font-size:18px;font-weight:700;color:var(--brand-d)}
+.community-stat .l{font-size:10.5px;color:var(--ink3);margin-top:1px}
+
+/* ============ 中：AI 引擎 ============ */
+.engine-card{min-height:200px}
+.engine-idle{text-align:center;padding:36px 20px;color:var(--ink3)}
+.engine-idle .big{font-size:46px;margin-bottom:10px;opacity:.5}
+.engine-idle p{font-size:13px}
+.engine-idle .hint{font-size:11.5px;color:var(--ink3);margin-top:8px}
+/* 推理链 */
+.reason-chain{padding:6px 0}
+.reason-step{display:flex;gap:12px;padding:10px 0;position:relative;opacity:0;transform:translateX(-12px);transition:.45s}
+.reason-step.show{opacity:1;transform:translateX(0)}
+.reason-step:not(:last-child)::before{content:"";position:absolute;left:15px;top:38px;bottom:-6px;width:2px;background:var(--line)}
+.reason-num{width:32px;height:32px;border-radius:50%;background:var(--brand-l);color:var(--brand-d);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;z-index:1;border:2px solid var(--brand-l)}
+.reason-step.done .reason-num{background:var(--brand);color:#fff;border-color:var(--brand)}
+.reason-txt{font-size:12.5px;padding-top:5px}
+.reason-txt b{color:var(--brand-d)}
+.reason-txt .arrow{color:var(--ink3);margin:0 4px}
+.reason-tag{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:5px;margin-right:5px;font-weight:600}
+/* 推理进度 */
+.engine-progress{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--brand-l);border-top:1px solid var(--line2)}
+.engine-progress .bar{flex:1;height:6px;background:rgba(13,139,138,.15);border-radius:4px;overflow:hidden}
+.engine-progress .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand),#34d399);border-radius:4px;transition:width .3s}
+.engine-progress .pct{font-size:12px;color:var(--brand-d);font-weight:700;min-width:38px;text-align:right}
+
+/* 菜单输出 */
+.menu-out{display:none;margin-top:4px}
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.dish-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;transition:.2s;cursor:default}
+.dish-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:var(--brand)}
+.dish-img{height:96px;display:flex;align-items:center;justify-content:center;font-size:40px;position:relative}
+.dish-img .badge{position:absolute;top:8px;left:8px;font-size:10px;padding:2px 8px;border-radius:5px;color:#fff;font-weight:600}
+.dish-body{padding:10px 12px}
+.dish-name{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:6px}
+.dish-name .role{font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600}
+.dish-desc{font-size:11.5px;color:var(--ink2);margin-top:4px;line-height:1.45}
+.dish-ingr{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+.dish-ingr span{font-size:10.5px;padding:2px 7px;border-radius:5px;background:var(--line2);color:var(--ink2)}
+.dish-ingr span.urgent{background:var(--red-l);color:#dc2626;font-weight:600}
+.dish-ingr span.high{background:var(--amber-l);color:#b45309}
+
+/* ============ 右：场景包+触达 ============ */
+.pkg-card .card-body{padding:0}
+.pkg-main{padding:14px 16px;background:linear-gradient(135deg,var(--brand-l),#f0fdfa)}
+.pkg-title{font-size:15px;font-weight:700;display:flex;align-items:center;gap:7px}
+.pkg-price{display:flex;align-items:baseline;gap:8px;margin-top:10px}
+.pkg-price .now{font-size:26px;font-weight:800;color:var(--red)}
+.pkg-price .now small{font-size:13px;font-weight:600}
+.pkg-price .old{font-size:13px;color:var(--ink3);text-decoration:line-through}
+.pkg-price .save{font-size:11px;background:var(--red);color:#fff;padding:2px 8px;border-radius:5px;font-weight:600}
+.pkg-items{padding:12px 16px;border-top:1px solid var(--line2)}
+.pkg-items .it{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px dotted var(--line2)}
+.pkg-items .it:last-child{border-bottom:none}
+.pkg-items .it .l{display:flex;align-items:center;gap:7px}
+.pkg-items .it .l em{font-size:10px;font-style:normal;padding:1px 5px;border-radius:4px}
+.pkg-items .it .qty{color:var(--ink3);font-size:11.5px}
+.pkg-link{margin:12px 16px;padding:11px 13px;background:var(--warm-l);border:1px dashed var(--warm);border-radius:10px;font-size:12px;display:flex;align-items:center;gap:8px}
+.pkg-link b{color:var(--warm)}
+/* 触达矩阵 */
+.reach-tabs{display:flex;gap:0;border-bottom:1px solid var(--line2);padding:0 12px}
+.reach-tabs button{padding:11px 12px;font-size:12px;color:var(--ink2);border-bottom:2px solid transparent;font-weight:500;transition:.2s;display:flex;align-items:center;gap:5px}
+.reach-tabs button.active{color:var(--brand-d);border-bottom-color:var(--brand);font-weight:600}
+.reach-panel{padding:14px 16px;display:none}
+.reach-panel.active{display:block}
+/* App推送 */
+.app-push{background:linear-gradient(135deg,#1e293b,#334155);border-radius:14px;padding:16px;color:#fff;position:relative;overflow:hidden}
+.app-push::before{content:"";position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(14,165,164,.3),transparent 70%)}
+.app-push .ph-top{display:flex;align-items:center;gap:8px;margin-bottom:10px;position:relative}
+.app-push .ph-av{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#f97316,#fb923c);display:flex;align-items:center;justify-content:center;font-size:16px}
+.app-push .ph-name{font-size:12.5px;font-weight:600}
+.app-push .ph-time{font-size:10.5px;color:#94a3b8}
+.app-push .ph-title{font-size:14px;font-weight:700;position:relative;margin-bottom:5px}
+.app-push .ph-body{font-size:12.5px;color:#cbd5e1;line-height:1.55;position:relative}
+.app-push .ph-cta{margin-top:11px;display:inline-flex;align-items:center;gap:6px;background:#f97316;padding:8px 16px;border-radius:9px;font-size:12px;font-weight:600;position:relative}
+/* 门店屏 */
+.screen-mock{background:#0f172a;border-radius:12px;padding:18px;color:#fff;position:relative;overflow:hidden;min-height:200px}
+.screen-mock .sm-head{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.screen-mock .sm-dish{font-size:22px;font-weight:800;margin-bottom:4px}
+.screen-mock .sm-sub{font-size:12px;color:#94a3b8;margin-bottom:12px}
+.screen-mock .sm-steps{font-size:11.5px;color:#cbd5e1;line-height:1.7}
+.screen-mock .sm-steps span{display:inline-block;background:rgba(255,255,255,.08);padding:2px 8px;border-radius:5px;margin:2px 2px 2px 0}
+.screen-mock .sm-price{position:absolute;bottom:14px;right:16px;text-align:right}
+.screen-mock .sm-price .p{font-size:24px;font-weight:800;color:#f97316}
+.screen-mock .sm-price .s{font-size:10.5px;color:#64748b}
+/* 员工指令 */
+.staff-list{display:flex;flex-direction:column;gap:8px}
+.staff-task{display:flex;gap:10px;padding:10px 12px;background:var(--line2);border-radius:10px;border-left:3px solid var(--brand)}
+.staff-task .st-no{width:22px;height:22px;border-radius:6px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.staff-task .st-txt{font-size:12px}
+.staff-task .st-txt b{color:var(--brand-d)}
+.staff-task .st-txt .when{display:block;font-size:10.5px;color:var(--ink3);margin-top:2px}
+/* 陈列图 */
+.display-map{background:var(--line2);border-radius:10px;padding:12px;position:relative;height:180px}
+.display-zone{position:absolute;border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10.5px;font-weight:600;color:#fff;text-align:center;padding:4px}
+.display-zone .z-icon{font-size:18px;margin-bottom:2px}
+.display-zone.main{background:linear-gradient(135deg,#0ea5a4,#14b8a6)}
+.display-zone.side{background:linear-gradient(135deg,#f97316,#fb923c)}
+.display-zone.cooked{background:linear-gradient(135deg,#8b5cf6,#a78bfa)}
+.display-zone.entrance{background:linear-gradient(135deg,#3b82f6,#60a5fa)}
+.display-legend{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap}
+.display-legend span{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink2)}
+.display-legend i{width:10px;height:10px;border-radius:3px;display:block}
+
+/* ============ 底：价值预估 ============ */
+.value-card{margin-top:16px}
+.value-grid{display:grid;grid-template-columns:repeat(4,1fr) 1.4fr;gap:14px;padding:16px}
+.kpi{background:var(--line2);border-radius:12px;padding:14px}
+.kpi .k-label{font-size:11.5px;color:var(--ink2);display:flex;align-items:center;gap:6px}
+.kpi .k-val{font-size:26px;font-weight:800;margin-top:6px;line-height:1}
+.kpi .k-val.up{color:var(--red)}
+.kpi .k-val.good{color:var(--green)}
+.kpi .k-sub{font-size:11px;color:var(--ink3);margin-top:5px}
+.kpi .k-sub .up{color:var(--green);font-weight:600}
+.compare-chart{background:var(--line2);border-radius:12px;padding:14px}
+.compare-chart .cc-title{font-size:12.5px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.compare-chart .cc-title .legend{margin-left:auto;display:flex;gap:10px;font-size:10.5px;font-weight:400;color:var(--ink2)}
+.compare-chart .cc-title .legend i{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:4px;vertical-align:middle}
+.cc-bars{display:flex;flex-direction:column;gap:9px}
+.cc-bar{display:flex;align-items:center;gap:8px;font-size:11px}
+.cc-bar .cc-l{width:62px;color:var(--ink2);flex-shrink:0}
+.cc-bar .cc-track{flex:1;display:flex;gap:3px}
+.cc-bar .cc-track .seg{height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:600;min-width:0;transition:width .6s}
+.cc-bar .cc-v{width:44px;text-align:right;font-weight:700;font-size:11.5px;flex-shrink:0}
+
+/* ============ 动画 ============ */
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin 1s linear infinite;display:inline-block}
+.thinking-dot{animation:pulse 1.2s ease-in-out infinite}
+.fade-up{animation:fadeUp .5s ease both}
+
+/* ============ 菜谱弹窗 ============ */
+.modal-overlay{position:fixed;inset:0;background:rgba(10,20,40,.55);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;animation:modalIn .3s ease}
+.modal-overlay.show{display:flex}
+@keyframes modalIn{from{opacity:0}to{opacity:1}}
+.modal{background:#fff;border-radius:18px;max-width:580px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:modalUp .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes modalUp{from{opacity:0;transform:translateY(30px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+.modal-close{position:absolute;top:14px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.06);font-size:18px;display:flex;align-items:center;justify-content:center;z-index:5;transition:.2s}
+.modal-close:hover{background:rgba(0,0,0,.12);transform:rotate(90deg)}
+.rm-hero{padding:28px 24px 20px;text-align:center;position:relative}
+.rm-hero .rm-emoji{font-size:56px;line-height:1;margin-bottom:8px}
+.rm-hero h2{font-size:22px;font-weight:800;margin-bottom:6px}
+.rm-hero .rm-badges{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.rm-hero .rm-badge{font-size:11px;padding:4px 11px;border-radius:7px;font-weight:600;background:var(--line2);color:var(--ink2)}
+.rm-meta{display:flex;gap:0;padding:0 24px;border-bottom:1px solid var(--line2)}
+.rm-meta-item{flex:1;text-align:center;padding:12px 4px;border-right:1px solid var(--line2)}
+.rm-meta-item:last-child{border-right:none}
+.rm-meta-item .v{font-size:15px;font-weight:700;color:var(--brand-d)}
+.rm-meta-item .l{font-size:10.5px;color:var(--ink3);margin-top:2px}
+.rm-section{padding:16px 24px;border-bottom:1px solid var(--line2)}
+.rm-section:last-child{border-bottom:none}
+.rm-section h4{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.rm-ingr-table{width:100%;border-collapse:collapse}
+.rm-ingr-table tr{border-bottom:1px dotted var(--line2)}
+.rm-ingr-table tr:last-child{border-bottom:none}
+.rm-ingr-table td{padding:8px 0;font-size:13px}
+.rm-ingr-table td:first-child{font-weight:500}
+.rm-ingr-table td:nth-child(2){text-align:right;color:var(--brand-d);font-weight:600}
+.rm-ingr-table td:nth-child(3){text-align:right;font-size:11.5px;color:var(--ink3);width:80px}
+.rm-steps{counter-reset:step;list-style:none}
+.rm-steps li{position:relative;padding:8px 0 8px 38px;font-size:13px;line-height:1.6;border-bottom:1px dotted var(--line2)}
+.rm-steps li:last-child{border-bottom:none}
+.rm-steps li::before{counter-increment:step;content:counter(step);position:absolute;left:0;top:7px;width:26px;height:26px;border-radius:50%;background:var(--brand-l);color:var(--brand-d);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.rm-tips{background:var(--warm-l);border-radius:10px;padding:12px 14px;font-size:12.5px;line-height:1.6;color:#92400e}
+.rm-tips b{color:#78350f}
+.rm-qr{display:flex;align-items:center;gap:16px;padding:18px 24px;background:linear-gradient(135deg,var(--brand-l),#f0fdfa);border-radius:0 0 18px 18px}
+.rm-qr-img{width:120px;height:120px;background:#fff;padding:8px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.08);flex-shrink:0}
+.rm-qr-img svg{width:100%;height:100%;display:block}
+.rm-qr-info{flex:1}
+.rm-qr-info h5{font-size:13px;font-weight:700;margin-bottom:4px}
+.rm-qr-info p{font-size:11.5px;color:var(--ink2);line-height:1.5}
+.rm-qr-info .rm-qr-url{font-size:10.5px;color:var(--ink3);margin-top:6px;word-break:break-all;font-family:monospace}
+.rm-qr-warn{font-size:10.5px;color:var(--amber);margin-top:4px}
+
+/* ============ 响应式 ============ */
+@media(max-width:1280px){
+  .grid{grid-template-columns:1fr;}
+  .value-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:640px){
+  .topbar{flex-wrap:wrap;gap:10px;padding:12px}
+  .scenario-tabs{order:3;width:100%;overflow-x:auto;flex-wrap:nowrap}
+  .value-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== 顶部栏 ===== -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-logo">🍽️</div>
+    <div class="brand-text">
+      <h1>AI 社区餐桌预测引擎</h1>
+      <p>即时烹饪场景经营平台 · Smart Retail Table Intelligence</p>
+    </div>
+  </div>
+  <div class="scenario-tabs" id="scenarioTabs"></div>
+  <div class="topbar-right">
+    <div class="weather-chip" id="weatherChip"></div>
+    <button class="gen-btn" id="genBtn" onclick="runEngine()">
+      <span class="spark">⚡</span><span id="genBtnText">生成今日方案</span>
+    </button>
+  </div>
+</div>
+
+<!-- ===== 主区域 ===== -->
+<div class="app">
+<div class="grid">
+
+  <!-- ===== 左列：态势感知 ===== -->
+  <div class="col">
+    <div class="card">
+      <div class="card-head">
+        <div class="h-icon" style="background:var(--blue-l);color:var(--blue)">📡</div>
+        <h3>今日态势感知</h3>
+        <span class="sub" id="sitDate"></span>
+      </div>
+      <div class="card-body" id="situationBody"></div>
+    </div>
+  </div>
+
+  <!-- ===== 中列：AI引擎 + 菜单 ===== -->
+  <div class="col">
+    <div class="card engine-card">
+      <div class="card-head">
+        <div class="h-icon" style="background:var(--brand-l);color:var(--brand-d)">🧠</div>
+        <h3>AI 决策引擎</h3>
+        <span class="sub" id="engineStatus">待命</span>
+      </div>
+      <div class="card-body" id="engineBody">
+        <div class="engine-idle" id="engineIdle">
+          <div class="big">🍳</div>
+          <p>引擎就绪 · 等待生成今日场景方案</p>
+          <p class="hint">点击右上角"生成今日方案"，AI 将根据库存 / 天气 / 社区画像自动组合今晚菜单</p>
+        </div>
+        <div class="reason-chain" id="reasonChain" style="display:none"></div>
+        <div class="menu-out" id="menuOut">
+          <div class="card-head" style="border:none;padding:6px 0 10px">
+            <div class="h-icon" style="background:var(--warm-l);color:var(--warm)">📋</div>
+            <h3>今日推荐菜单</h3>
+            <span class="sub" id="menuMeta"></span>
+          </div>
+          <div class="menu-grid" id="menuGrid"></div>
+        </div>
+      </div>
+      <div class="engine-progress" id="engineProgress" style="display:none">
+        <span style="font-size:12px;color:var(--brand-d);font-weight:600" id="progressLabel">推理中</span>
+        <div class="bar"><i id="progressBar"></i></div>
+        <span class="pct" id="progressPct">0%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 右列：场景包 + 触达 ===== -->
+  <div class="col">
+    <div class="card pkg-card" id="pkgCard" style="display:none">
+      <div class="card-head">
+        <div class="h-icon" style="background:var(--warm-l);color:var(--warm)">📦</div>
+        <h3>场景包 · 今日主推</h3>
+      </div>
+      <div class="card-body">
+        <div class="pkg-main" id="pkgMain"></div>
+        <div class="pkg-items" id="pkgItems"></div>
+        <div class="pkg-link" id="pkgLink"></div>
+      </div>
+    </div>
+
+    <div class="card" id="reachCard" style="display:none">
+      <div class="card-head">
+        <div class="h-icon" style="background:var(--purple-l);color:var(--purple)">📡</div>
+        <h3>全渠道触达矩阵</h3>
+        <span class="sub">一个决策 · 多端落地</span>
+      </div>
+      <div class="reach-tabs" id="reachTabs"></div>
+      <div id="reachPanels"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== 底部：价值预估 ===== -->
+<div class="card value-card" id="valueCard" style="display:none">
+  <div class="card-head">
+    <div class="h-icon" style="background:var(--green-l);color:var(--green)">📈</div>
+    <h3>价值预估 · 传统打折 vs 场景化经营</h3>
+    <span class="sub" id="valueSub"></span>
+  </div>
+  <div class="value-grid" id="valueGrid"></div>
+</div>
+
+</div><!-- /app -->
+
+
+<!-- 菜谱弹窗 -->
+<div class="modal-overlay" id="recipeModal" onclick="if(event.target===this)closeRecipe()">
+  <div class="modal" id="recipeModalInner"></div>
+</div>
+
+<script src="data.js"></script>
+
+<!-- 菜谱弹窗 -->
+<div class="modal-overlay" id="recipeModal" onclick="if(event.target===this)closeRecipe()">
+  <div class="modal" id="recipeModalInner"></div>
+</div>
+
+<script src="data.js"></script>
+<script>
+
+/* ============================================================
+   状态
+   ============================================================ */
+let currentScenario = 's1';
+let engineRunning = false;
+let generated = false;
+
+/* ============================================================
+   QR Code 生成器 (纯JS零依赖, byte mode, ECC Level L, V1-V5)
+   ============================================================ */
+const QRGen = (function(){
+  // GF(256) 指数/对数表
+  const EXP=new Uint8Array(512), LOG=new Uint8Array(256);
+  let x=1;
+  for(let i=0;i<255;i++){EXP[i]=x;LOG[x]=i;x<<=1;if(x&0x100)x^=0x11d;}
+  for(let i=255;i<512;i++)EXP[i]=EXP[i-255];
+  const mul=(a,b)=>(!a||!b)?0:EXP[LOG[a]+LOG[b]];
+
+  // 生成 Reed-Solomon 生成多项式
+  function rsGen(n){let p=[1];for(let i=0;i<n;i++){let q=new Array(p.length+1).fill(0);for(let j=0;j<p.length;j++){q[j]^=p[j];q[j+1]^=mul(p[j],EXP[i]);}p=q;}return p;}
+  // Reed-Solomon 编码
+  function rsEnc(data,ecLen){
+    const g=rsGen(ecLen), r=new Array(ecLen).fill(0);
+    for(let i=0;i<data.length;i++){
+      const f=data[i]^r[0]; r.shift(); r.push(0);
+      if(f) for(let j=0;j<ecLen;j++) r[j]^=mul(g[j+1],f);
+    }
+    return r;
+  }
+
+  // 数据容量(字节数) & EC长度, Level L, V1-V5
+  const DC=[19,34,55,80,108], EC=[7,10,15,20,26];
+  // 对齐图案中心位置
+  const ALIGN=[[],[6,18],[6,22],[6,26],[6,30]];
+
+  function utf8Bytes(s){
+    const a=[];
+    for(let i=0;i<s.length;i++){
+      let c=s.charCodeAt(i);
+      if(c<0x80)a.push(c);
+      else if(c<0x800){a.push(0xC0|(c>>6),0x80|(c&0x3F));}
+      else{a.push(0xE0|(c>>12),0x80|((c>>6)&0x3F),0x80|(c&0x3F));}
+    }
+    return a;
+  }
+
+  function selectVersion(n){
+    for(let v=0;v<5;v++){ if(n<=DC[v]-2) return v+1; }
+    return 5;
+  }
+
+  function makeCodewords(bytes, ver){
+    const bits=[];
+    bits.push(0,1,0,0); // byte mode
+    const len=Math.min(bytes.length, DC[ver-1]-2);
+    for(let i=7;i>=0;i--) bits.push((len>>i)&1);
+    for(let b=0;b<len;b++) for(let i=7;i>=0;i--) bits.push((bytes[b]>>i)&1);
+    const totalBits=DC[ver-1]*8;
+    for(let i=0;i<4&&bits.length<totalBits;i++) bits.push(0); // terminator
+    while(bits.length%8) bits.push(0); // pad to byte
+    const cw=[];
+    for(let i=0;i<bits.length;i+=8){let b=0;for(let j=0;j<8;j++)b=(b<<1)|bits[i+j];cw.push(b);}
+    const pad=[0xEC,0x11]; let pi=0;
+    while(cw.length<DC[ver-1]) cw.push(pad[pi++%2]);
+    return cw;
+  }
+
+  function placeFinder(m,r,c){
+    for(let dr=0;dr<7;dr++) for(let dc=0;dc<7;dc++){
+      const border=(dr===0||dr===6||dc===0||dc===6);
+      const inner=(dr>=2&&dr<=4&&dc>=2&&dc<=4);
+      m[r+dr][c+dc]=border||inner;
+    }
+  }
+
+  function buildMatrix(data, ver){
+    const size=17+4*ver;
+    const m=[], reserved=[];
+    for(let i=0;i<size;i++){m.push(new Array(size).fill(null));reserved.push(new Array(size).fill(false));}
+
+    // Finder + separator
+    for(let i=0;i<8;i++){
+      for(let j=0;j<8;j++){
+        reserved[i][j]=reserved[i][size-8+j]=reserved[size-8+i][j]=true;
+        m[i][j]=m[i][size-8+j]=m[size-8+i][j]=false;
+      }
+    }
+    placeFinder(m,0,0); placeFinder(m,0,size-7); placeFinder(m,size-7,0);
+
+    // Alignment patterns
+    const ap=ALIGN[ver-1];
+    for(let i=0;i<ap.length;i++) for(let j=0;j<ap.length;j++){
+      const r=ap[i], c=ap[j];
+      if((r<=8&&c<=8)||(r<=8&&c>=size-9)||(r>=size-9&&c<=8)) continue;
+      for(let dr=-2;dr<=2;dr++) for(let dc=-2;dc<=2;dc++){
+        const dark=(Math.abs(dr)===2)||(Math.abs(dc)===2)||(dr===0&&dc===0);
+        m[r+dr][c+dc]=dark; reserved[r+dr][c+dc]=true;
+      }
+    }
+
+    // Timing patterns
+    for(let i=8;i<size-8;i++){
+      if(!reserved[6][i]){m[6][i]=(i%2===0);reserved[6][i]=true;}
+      if(!reserved[i][6]){m[i][6]=(i%2===0);reserved[i][6]=true;}
+    }
+
+    // Reserve format info areas
+    for(let i=0;i<9;i++){
+      if(i!==6 && !reserved[8][i]){reserved[8][i]=true;m[8][i]=false;}
+      if(i!==6 && !reserved[i][8]){reserved[i][8]=true;m[i][8]=false;}
+    }
+    for(let i=0;i<8;i++){
+      const c=size-1-i;
+      if(!reserved[8][c]){reserved[8][c]=true;m[8][c]=false;}
+      if(!reserved[c===size-1?size-1:c][8]){reserved[size-1-i][8]=true;m[size-1-i][8]=false;}
+    }
+    // Dark module
+    m[size-8][8]=true; reserved[size-8][8]=true;
+
+    // Place data (zigzag)
+    let bitIdx=0, dir=-1;
+    for(let col=size-1; col>0; col-=2){
+      if(col===6) col=5;
+      for(let i=0;i<size;i++){
+        const row = dir<0 ? size-1-i : i;
+        for(let dc=0;dc<2;dc++){
+          const c=col-dc;
+          if(c<0||reserved[row][c]) continue;
+          const byteIdx=bitIdx>>3, bitInByte=7-(bitIdx&7);
+          const bit = byteIdx<data.length ? ((data[byteIdx]>>bitInByte)&1) : 0;
+          m[row][c]= bit===1;
+          bitIdx++;
+        }
+      }
+      dir=-dir;
+    }
+    return {m, reserved, size};
+  }
+
+  // 8种掩码
+  const MASKS=[
+    (r,c)=>(r+c)%2===0,
+    (r,c)=>r%2===0,
+    (r,c)=>c%3===0,
+    (r,c)=>(r+c)%3===0,
+    (r,c)=>(Math.floor(r/2)+Math.floor(c/3))%2===0,
+    (r,c)=>((r*c)%2)+((r*c)%3)===0,
+    (r,c)=>(((r*c)%2)+((r*c)%3))%2===0,
+    (r,c)=>(((r+c)%2)+((r*c)%3))%2===0,
+  ];
+
+  function applyMask(m, reserved, size, maskFn){
+    const copy=m.map(r=>r.slice());
+    for(let r=0;r<size;r++) for(let c=0;c<size;c++){
+      if(!reserved[r][c] && maskFn(r,c)) copy[r][c]=!copy[r][c];
+    }
+    return copy;
+  }
+
+  function penalty(m, size){
+    let p=0;
+    // Rule 1: consecutive same color
+    for(let r=0;r<size;r++){
+      let run=1;
+      for(let c=1;c<size;c++){
+        if(m[r][c]===m[r][c-1]){run++;if(run===5)p+=3;else if(run>5)p++;}
+        else run=1;
+      }
+    }
+    for(let c=0;c<size;c++){
+      let run=1;
+      for(let r=1;r<size;r++){
+        if(m[r][c]===m[r-1][c]){run++;if(run===5)p+=3;else if(run>5)p++;}
+        else run=1;
+      }
+    }
+    // Rule 2: 2x2 blocks
+    for(let r=0;r<size-1;r++) for(let c=0;c<size-1;c++){
+      if(m[r][c]===m[r][c+1]&&m[r][c]===m[r+1][c]&&m[r][c]===m[r+1][c+1]) p+=3;
+    }
+    // Rule 4: dark module ratio
+    let dark=0;
+    for(let r=0;r<size;r++) for(let c=0;c<size;c++) if(m[r][c]) dark++;
+    const pct=dark*100/(size*size);
+    p+=Math.floor(Math.abs(pct-50)/5)*10;
+    return p;
+  }
+
+  function placeFormat(m, reserved, size, maskId){
+    // ECC level L = 01
+    const data=(0b01<<3|maskId)<<10;
+    let rem=data;
+    for(let i=14;i>=10;i--){
+      if(rem&(1<<i)) rem^=0b10100110111<<(i-10);
+    }
+    let fmt=(data|rem)^0b101010000010010;
+    const bits=[];
+    for(let i=14;i>=0;i--) bits.push((fmt>>i)&1);
+
+    // Place format info
+    for(let i=0;i<=5;i++) m[8][i]=bits[14-i]===1;
+    m[8][7]=bits[8]===1; m[8][8]=bits[7]===1; m[7][8]=bits[6]===1;
+    for(let i=5;i>=0;i--) m[i][8]=bits[5-i]===1;
+    for(let i=0;i<7;i++) m[size-1-i][8]=bits[14-i]===1;
+    for(let i=0;i<8;i++) m[8][size-8+i]=bits[7-i]===1;
+  }
+
+  function generate(text){
+    const bytes=utf8Bytes(text);
+    const ver=selectVersion(bytes.length);
+    const dataCW=makeCodewords(bytes, ver);
+    const ecCW=rsEnc(dataCW, EC[ver-1]);
+    const allCW=dataCW.concat(ecCW);
+    const {m, reserved, size}=buildMatrix(allCW, ver);
+
+    // Try all masks, pick best
+    let bestM=null, bestP=Infinity, bestMask=0;
+    for(let i=0;i<8;i++){
+      const masked=applyMask(m, reserved, size, MASKS[i]);
+      placeFormat(masked, reserved, size, i);
+      const p=penalty(masked, size);
+      if(p<bestP){bestP=p;bestM=masked;bestMask=i;}
+    }
+    return {matrix:bestM, size, version:ver};
+  }
+
+  function toSVG(matrix, size, scale){
+    scale=scale||1;
+    let cells='';
+    for(let r=0;r<size;r++) for(let c=0;c<size;c++){
+      if(matrix[r][c]) cells+=`<rect x="${c}" y="${r}" width="1" height="1"/>`;
+    }
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges">${cells}</svg>`;
+  }
+
+  return {generate, toSVG};
+})();
+
+/* ============================================================
+   初始化
+   ============================================================ */
+function init(){
+  renderScenarioTabs();
+  loadScenario('s1');
+}
+
+function renderScenarioTabs(){
+  const wrap = document.getElementById('scenarioTabs');
+  wrap.innerHTML = Object.entries(SCENARIOS).map(([k,s])=>
+    `<button class="${k===currentScenario?'active':''}" onclick="switchScenario('${k}')">${s.icon} ${s.name}</button>`
+  ).join('');
+}
+
+function switchScenario(key){
+  if(engineRunning) return;
+  currentScenario = key;
+  renderScenarioTabs();
+  loadScenario(key);
+  generated = false;
+  resetEngine();
+}
+
+function loadScenario(key){
+  const s = SCENARIOS[key];
+  document.getElementById('weatherChip').innerHTML = `<span class="w-icon">${s.weather.icon}</span><span>${s.weather.text}</span>`;
+  document.getElementById('sitDate').textContent = s.date;
+  renderSituation(s.situation);
+}
+
+function renderSituation(sit){
+  const statusMap = {danger:['tag-danger','⚠️'],warn:['tag-warn','📈'],ok:['tag-ok','✅']};
+  let html = '';
+  html += `<div class="sit-item">
+    <div class="sit-label"><span>📦 库存与临期预警</span><span class="tag ${sit.inventory.some(i=>i.status==='danger')?'tag-danger':'tag-warn'}">${sit.inventory.filter(i=>i.status==='danger').length} 项临期</span></div>`;
+  sit.inventory.forEach(it=>{
+    const [cls,ic] = statusMap[it.status];
+    const color = it.status==='danger'?'var(--red)':it.status==='warn'?'var(--amber)':'var(--green)';
+    html += `<div class="inv-row">
+      <span class="dot" style="background:${color}"></span>
+      <span class="nm">${it.name}</span>
+      <span class="meta">${it.stock} · ${it.days}</span>
+    </div>
+    <div class="inv-bar"><i style="width:${it.level}%;background:${color}"></i></div>`;
+  });
+  html += `</div>`;
+  html += `<div class="sit-item">
+    <div class="sit-label"><span>🏘️ 社区画像</span><span class="tag tag-info">${sit.community.type}</span></div>
+    <div class="community-stats">
+      <div class="community-stat"><div class="v">${sit.community.radius}</div><div class="l">覆盖半径</div></div>
+      <div class="community-stat"><div class="v">${sit.community.peak.split(' ')[0]}</div><div class="l">客流高峰</div></div>
+      <div class="community-stat"><div class="v">${sit.flow.replace('预计 ','')}</div><div class="l">预计客流</div></div>
+      <div class="community-stat"><div class="v">${sit.community.kids.match(/\d+/)?.[0]||'40'}%</div><div class="l">学区占比</div></div>
+    </div>
+  </div>`;
+  html += `<div class="sit-item">
+    <div class="sit-label"><span>🔥 历史热销菜</span></div>
+    <div style="font-size:12px;color:var(--ink2);line-height:1.6">${sit.hot}</div>
+  </div>`;
+  const s = SCENARIOS[currentScenario];
+  html += `<div class="sit-item">
+    <div class="sit-label"><span>${s.weather.icon} 天气影响</span></div>
+    <div style="font-size:12px;color:var(--ink2)">${s.weather.desc}</div>
+  </div>`;
+  document.getElementById('situationBody').innerHTML = html;
+}
+
+/* ============================================================
+   AI 引擎运行
+   ============================================================ */
+function resetEngine(){
+  document.getElementById('engineIdle').style.display='block';
+  document.getElementById('reasonChain').style.display='none';
+  document.getElementById('reasonChain').innerHTML='';
+  document.getElementById('menuOut').style.display='none';
+  document.getElementById('engineProgress').style.display='none';
+  document.getElementById('engineStatus').textContent='待命';
+  document.getElementById('pkgCard').style.display='none';
+  document.getElementById('reachCard').style.display='none';
+  document.getElementById('valueCard').style.display='none';
+  document.getElementById('genBtnText').textContent='生成今日方案';
+}
+
+async function runEngine(){
+  if(engineRunning) return;
+  engineRunning = true;
+  generated = true;
+  const s = SCENARIOS[currentScenario];
+  const btnText = document.getElementById('genBtnText');
+  document.getElementById('engineIdle').style.display='none';
+  document.getElementById('reasonChain').style.display='block';
+  document.getElementById('menuOut').style.display='none';
+  document.getElementById('engineProgress').style.display='flex';
+  document.getElementById('engineStatus').textContent='推理中…';
+  btnText.innerHTML = '<span class="thinking-dot">AI 推理中</span>';
+  document.getElementById('pkgCard').style.display='none';
+  document.getElementById('reachCard').style.display='none';
+  document.getElementById('valueCard').style.display='none';
+  const chain = document.getElementById('reasonChain');
+  chain.innerHTML = '';
+  const steps = s.reasoning;
+  const tagColors = {danger:['var(--red-l)','var(--red)'],warn:['var(--amber-l)','#b45309'],info:['var(--blue-l)','var(--blue)'],ok:['var(--green-l)','var(--green)']};
+  for(let i=0;i<steps.length;i++){
+    const st = steps[i];
+    const [bg,c] = tagColors[st.tag];
+    const el = document.createElement('div');
+    el.className = 'reason-step';
+    el.innerHTML = `
+      <div class="reason-num">${i+1}</div>
+      <div class="reason-txt">
+        <span class="reason-tag" style="background:${bg};color:${c}">${st.tagText}</span>
+        ${st.text}
+      </div>`;
+    chain.appendChild(el);
+    const pct = Math.round(((i+1)/steps.length)*100);
+    document.getElementById('progressBar').style.width = pct+'%';
+    document.getElementById('progressPct').textContent = pct+'%';
+    document.getElementById('progressLabel').textContent = st.tagText+': '+ (i+1) +'/'+steps.length;
+    await sleep(650);
+    el.classList.add('show');
+    await sleep(250);
+    el.classList.add('done');
+  }
+  document.getElementById('progressLabel').textContent = '推理完成';
+  document.getElementById('progressPct').textContent = '100%';
+  document.getElementById('engineStatus').textContent = '方案已生成 ✓';
+  btnText.textContent = '重新生成';
+  await sleep(300);
+  renderMenu(s);
+  renderPackage(s);
+  renderReach(s);
+  renderValue(s);
+  engineRunning = false;
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+/* ============================================================
+   渲染：菜单 (菜谱卡片可点击)
+   ============================================================ */
+function renderMenu(s){
+  document.getElementById('menuOut').style.display='block';
+  document.getElementById('menuMeta').textContent = s.menu.length+' 道菜 · 点击查看菜谱';
+  const grid = document.getElementById('menuGrid');
+  grid.innerHTML = s.menu.map((d,i)=>`
+    <div class="dish-card fade-up" style="animation-delay:${i*0.1}s;cursor:pointer" onclick="openRecipe('${currentScenario}',${i})">
+      <div class="dish-img" style="background:${d.bg}">
+        <span class="badge" style="background:${d.badgeColor}">${d.badge}</span>
+        ${d.emoji}
+      </div>
+      <div class="dish-body">
+        <div class="dish-name">${d.name}<span class="role" style="background:${d.roleColor}20;color:${d.roleColor}">${d.role}</span></div>
+        <div class="dish-desc">${d.desc}</div>
+        <div class="dish-ingr">${d.ingr.map(ig=>`<span class="${ig.c}">${ig.n}</span>`).join('')}</div>
+        <div style="margin-top:8px;font-size:11px;color:var(--brand-d);font-weight:600;display:flex;align-items:center;gap:4px">📖 查看完整菜谱 →</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ============================================================
+   渲染：场景包
+   ============================================================ */
+function renderPackage(s){
+  const p = s.package;
+  document.getElementById('pkgCard').style.display='block';
+  document.getElementById('pkgCard').classList.add('fade-up');
+  document.getElementById('pkgMain').innerHTML = `
+    <div class="pkg-title">${p.emoji} ${p.title}</div>
+    <div class="pkg-price">
+      <span class="now"><small>¥</small>${p.now}</span>
+      <span class="old">原价 ¥${p.old}</span>
+      <span class="save">${p.save}</span>
+    </div>`;
+  document.getElementById('pkgItems').innerHTML = p.items.map(it=>{
+    let emStyle = '';
+    if(it.em==='danger') emStyle='background:var(--red-l);color:var(--red)';
+    else if(it.em==='warn') emStyle='background:var(--amber-l);color:#b45309';
+    else emStyle='background:var(--line2);color:var(--ink3)';
+    return `<div class="it">
+      <span class="l">${it.n} <em style="${emStyle}">${it.tag}</em></span>
+      <span class="qty">${it.qty||''}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('pkgLink').innerHTML = `🔗 <b>${p.linkText}：</b>${p.link}`;
+}
+
+/* ============================================================
+   渲染：触达矩阵
+   ============================================================ */
+function renderReach(s){
+  document.getElementById('reachCard').style.display='block';
+  document.getElementById('reachCard').classList.add('fade-up');
+  const r = s.reach;
+  const tabs = [
+    {key:'push',icon:'📱',label:'会员App'},
+    {key:'screen',icon:'📺',label:'门店大屏'},
+    {key:'staff',icon:'👔',label:'员工指令'},
+    {key:'display',icon:'🗺️',label:'陈列图'},
+  ];
+  document.getElementById('reachTabs').innerHTML = tabs.map((t,i)=>
+    `<button class="${i===0?'active':''}" onclick="switchReach(this,'${t.key}')">${t.icon} ${t.label}</button>`
+  ).join('');
+  let panels = '';
+  panels += `<div class="reach-panel active" data-k="push">
+    <div class="app-push">
+      <div class="ph-top">
+        <div class="ph-av">🍽️</div>
+        <div><div class="ph-name">鲜超优选 · 会员</div><div class="ph-time">${r.push.time}</div></div>
+      </div>
+      <div class="ph-title">${r.push.title}</div>
+      <div class="ph-body">${r.push.body}</div>
+      <div class="ph-cta">${r.push.cta} →</div>
+    </div>
+  </div>`;
+  panels += `<div class="reach-panel" data-k="screen">
+    <div class="screen-mock">
+      <div class="sm-head">门店大屏 · 今日推荐</div>
+      <div class="sm-dish">${r.screen.dish}</div>
+      <div class="sm-sub">${r.screen.sub}</div>
+      <div class="sm-steps">${r.screen.steps.map(st=>`<span>${st}</span>`).join('')}</div>
+      <div class="sm-price"><div class="p">¥${r.screen.price}</div><div class="s">${r.screen.unit}</div></div>
+    </div>
+  </div>`;
+  panels += `<div class="reach-panel" data-k="staff">
+    <div class="staff-list">${r.staff.map((t,i)=>`
+      <div class="staff-task">
+        <div class="st-no">${i+1}</div>
+        <div class="st-txt">${t.t}<span class="when">⏰ ${t.when}</span></div>
+      </div>`).join('')}</div>
+  </div>`;
+  panels += `<div class="reach-panel" data-k="display">
+    <div class="display-map">
+      <div class="display-zone entrance" style="left:8px;top:8px;width:40%;height:34px;flex-direction:row;gap:4px"><span class="z-icon">🚪</span>${r.display.entrance}</div>
+      <div class="display-zone main" style="left:8px;top:54px;width:54%;height:62px"><span class="z-icon">📦</span>${r.display.main}</div>
+      <div class="display-zone side" style="right:8px;top:8px;width:36%;height:50px"><span class="z-icon">🥬</span>${r.display.side}</div>
+      <div class="display-zone cooked" style="right:8px;top:66px;width:36%;height:50px"><span class="z-icon">🍚</span>${r.display.cooked}</div>
+    </div>
+    <div class="display-legend">
+      <span><i style="background:#0ea5a4"></i>主推堆头</span>
+      <span><i style="background:#f97316"></i>配菜区</span>
+      <span><i style="background:#8b5cf6"></i>熟食联动</span>
+      <span><i style="background:#3b82f6"></i>入口引流</span>
+    </div>
+  </div>`;
+  document.getElementById('reachPanels').innerHTML = panels;
+}
+
+function switchReach(btn,key){
+  document.querySelectorAll('#reachTabs button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.reach-panel').forEach(p=>{
+    p.classList.toggle('active', p.dataset.k===key);
+  });
+}
+
+/* ============================================================
+   渲染：价值预估
+   ============================================================ */
+function renderValue(s){
+  const v = s.value;
+  document.getElementById('valueCard').style.display='block';
+  document.getElementById('valueCard').classList.add('fade-up');
+  document.getElementById('valueSub').textContent = '基于场景：'+s.name;
+  let kpiHtml = v.kpis.map(k=>`
+    <div class="kpi">
+      <div class="k-label">${k.icon} ${k.label}</div>
+      <div class="k-val ${k.color}">${k.val}</div>
+      <div class="k-sub">${k.sub}</div>
+    </div>`).join('');
+  const maxVal = Math.max(...v.compare.map(c=>Math.max(c.trad,c.scene)));
+  let compareHtml = v.compare.map(c=>{
+    const tPct = (c.trad/maxVal*100).toFixed(0);
+    const sPct = (c.scene/maxVal*100).toFixed(0);
+    return `<div class="cc-bar">
+      <span class="cc-l">${c.label}</span>
+      <div class="cc-track">
+        <div class="seg" style="width:${tPct}%;background:#94a3b8">${c.tradLabel}</div>
+        <div class="seg" style="width:${sPct}%;background:linear-gradient(90deg,#0ea5a4,#22c55e)">${c.sceneLabel}</div>
+      </div>
+      <span class="cc-v">↑</span>
+    </div>`;
+  }).join('');
+  document.getElementById('valueGrid').innerHTML = kpiHtml + `
+    <div class="compare-chart">
+      <div class="cc-title">📊 传统打折 vs 场景化经营
+        <span class="legend"><span><i style="background:#94a3b8"></i>传统</span><span><i style="background:#22c55e"></i>场景化</span></span>
+      </div>
+      <div class="cc-bars">${compareHtml}</div>
+    </div>`;
+}
+
+/* ============================================================
+   菜谱弹窗 + 二维码
+   ============================================================ */
+function openRecipe(scenarioKey, dishIdx){
+  const s = SCENARIOS[scenarioKey];
+  const d = s.menu[dishIdx];
+  const r = d.recipe;
+  if(!r) return;
+
+  // 构建菜谱页 URL
+  const base = window.location.origin + window.location.pathname.replace(/index\.html$/, '');
+  const recipeUrl = base + 'recipe.html?s=' + scenarioKey + '&d=' + dishIdx;
+
+  // 生成二维码
+  const qr = QRGen.generate(recipeUrl);
+  const qrSVG = QRGen.toSVG(qr.matrix, qr.size);
+
+  // 判断是否局域网可访问
+  const host = window.location.hostname;
+  const isLocal = host==='localhost' || host==='127.0.0.1' || host==='';
+  const qrWarn = isLocal ? '<div class="rm-qr-warn">⚠️ 当前为本地访问，手机扫码需通过局域网IP打开本页面</div>' : '<div class="rm-qr-warn" style="color:var(--green)">✅ 手机与电脑在同一WiFi下即可扫码打开</div>';
+
+  const modal = document.getElementById('recipeModalInner');
+  modal.innerHTML = `
+    <button class="modal-close" onclick="closeRecipe()">✕</button>
+    <div class="rm-hero" style="background:${d.bg}">
+      <div class="rm-emoji">${d.emoji}</div>
+      <h2>${d.name}</h2>
+      <div class="rm-badges">
+        <span class="rm-badge" style="background:${d.badgeColor}20;color:${d.badgeColor}">${d.badge}</span>
+        <span class="rm-badge">${r.servings}</span>
+        <span class="rm-badge">⏱️ ${r.time}</span>
+        <span class="rm-badge">📊 ${r.difficulty}</span>
+        <span class="rm-badge">🔥 ${r.calories}</span>
+      </div>
+    </div>
+    <div class="rm-meta">
+      <div class="rm-meta-item"><div class="v">${r.servings}</div><div class="l">分量</div></div>
+      <div class="rm-meta-item"><div class="v">${r.time}</div><div class="l">用时</div></div>
+      <div class="rm-meta-item"><div class="v">${r.difficulty}</div><div class="l">难度</div></div>
+      <div class="rm-meta-item"><div class="v">${r.calories}</div><div class="l">热量</div></div>
+    </div>
+    <div class="rm-section">
+      <h4>🥬 食材清单</h4>
+      <table class="rm-ingr-table">
+        ${r.ingredients.map(ing=>`<tr><td>${ing.name}</td><td>${ing.amount}</td><td>${ing.note||''}</td></tr>`).join('')}
+      </table>
+    </div>
+    <div class="rm-section">
+      <h4>👩‍🍳 制作步骤</h4>
+      <ol class="rm-steps">
+        ${r.steps.map(st=>`<li>${st}</li>`).join('')}
+      </ol>
+    </div>
+    <div class="rm-section">
+      <h4>💡 小贴士</h4>
+      <div class="rm-tips">${r.tips}</div>
+    </div>
+    <div class="rm-qr">
+      <div class="rm-qr-img">${qrSVG}</div>
+      <div class="rm-qr-info">
+        <h5>📱 扫码查看完整菜谱</h5>
+        <p>手机扫码即可打开菜谱页面，方便收藏和分享给家人朋友。</p>
+        ${qrWarn}
+        <div class="rm-qr-url">${recipeUrl}</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('recipeModal').classList.add('show');
+  document.body.style.overflow='hidden';
+}
+
+function closeRecipe(){
+  document.getElementById('recipeModal').classList.remove('show');
+  document.body.style.overflow='';
+}
+
+// ESC关闭弹窗
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeRecipe(); });
+
+/* 启动 */
+init();
+
+</script>
+</body>
+</html>
