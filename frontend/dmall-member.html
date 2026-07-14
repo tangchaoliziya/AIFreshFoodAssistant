@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dmall 会员 App · 今日推送</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--orange:#f4512a;--orange-d:#d93b20;--orange-l:#fff0eb;--ink:#26201e;--muted:#7b706c;--line:#f0dfd9;--surface:#fff;--bg:#fff7f4;--green:#1b8a5a;--shadow:0 10px 30px rgba(114,42,26,.12)}
+body{min-height:100vh;background:var(--bg);color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;line-height:1.5}
+button{font:inherit;cursor:pointer;border:0}.page{max-width:460px;min-height:100vh;margin:0 auto;background:var(--surface);box-shadow:var(--shadow)}
+.notice{padding:8px 18px;background:#2e2623;color:#fff;font-size:11px;text-align:center}.notice span{color:#ffc8b8}
+.app-bar{height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;font-weight:800;color:var(--orange);font-size:19px}.brand-mark{width:28px;height:28px;border-radius:8px;background:var(--orange);color:#fff;display:grid;place-items:center;font-size:15px}.city{font-size:12px;color:var(--muted);font-weight:600}
+.main{padding:16px 16px 28px}.location{font-size:12px;color:var(--muted);margin-bottom:13px}.location strong{color:var(--ink)}
+.push-card{padding:18px;background:var(--orange-l);border:1px solid #ffd6ca;border-radius:8px}.push-meta{display:flex;align-items:center;gap:7px;color:var(--orange-d);font-size:11px;font-weight:700}.push-dot{width:7px;height:7px;border-radius:50%;background:var(--orange)}
+.push-title{font-size:20px;line-height:1.35;font-weight:800;margin:9px 0;color:#35211b}.push-body{font-size:13px;color:#694d45}.push-cta{margin-top:15px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;color:var(--orange-d)}
+.section-title{font-size:15px;font-weight:800;margin:24px 0 10px}.menu-list{border-top:1px solid var(--line)}.menu-item{display:flex;align-items:center;gap:11px;padding:13px 2px;border-bottom:1px solid var(--line)}.dish-icon{width:42px;height:42px;display:grid;place-items:center;background:#fff6f1;border-radius:8px;font-size:22px}.dish-info{flex:1;min-width:0}.dish-name{font-size:13px;font-weight:700}.dish-reason{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.price{font-size:15px;font-weight:800;color:var(--orange)}.price small{font-size:10px;color:var(--muted);font-weight:500;margin-left:2px}
+.benefit{display:flex;gap:10px;padding:12px;margin-top:18px;background:#f0f8f3;border-radius:8px;color:#276645;font-size:12px}.benefit i{font-style:normal;font-size:17px}.status{margin-top:18px;padding:11px 12px;border-radius:7px;font-size:12px}.status.waiting{background:#fff5df;color:#9a6405}.status.accepted{background:#e8f7ee;color:#187147}.status.rejected{background:#fff0ee;color:#b93828}.error{padding:24px 8px;text-align:center;color:var(--muted);font-size:13px}.back{display:block;width:100%;padding:12px;margin-top:22px;background:#2e2623;color:#fff;border-radius:7px;font-size:13px;font-weight:700}
+@media(min-width:680px){body{padding:28px;background:linear-gradient(135deg,#fff1eb 0%,#fff7f4 50%,#f5efe9 100%)}.page{border-radius:10px;min-height:calc(100vh - 56px);overflow:hidden}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="notice">多点 Dmall <span>· 会员 App 模拟界面</span></div>
+  <header class="app-bar"><div class="brand"><span class="brand-mark">D</span><span>多点 Dmall</span></div><div class="city">北京 · 优选到家</div></header>
+  <main class="main" id="appContent"><div class="error">正在加载今日会员推送...</div></main>
+</div>
+<script>
+const planId=new URLSearchParams(location.search).get('plan_id');
+const escapeHtml=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+const decisionText=decision=>decision==='accepted'?'该方案已由门店负责人接受，正在执行。':decision==='rejected'?'该方案未被门店负责人接受，本次推送暂不下发。':'该推送待门店负责人确认后下发。';
+
+function renderPage(plan){
+  const result=plan.result||{};
+  const menus=(result.menus||[]).map(dish=>`<div class="menu-item"><div class="dish-icon">${escapeHtml(dish.emoji||'🍳')}</div><div class="dish-info"><div class="dish-name">${escapeHtml(dish.dish)}</div><div class="dish-reason">${escapeHtml(dish.priority_reason||'今晚到家，轻松开饭')}</div></div><div class="price">¥${escapeHtml(dish.package_price)}<small>套餐</small></div></div>`).join('');
+  const state=plan.decision||'waiting';
+  document.getElementById('appContent').innerHTML=`
+    <div class="location">配送至 <strong>${escapeHtml(plan.input_context?.store_info?.store_name||'附近门店')}</strong> · 今日推荐</div>
+    <section class="push-card"><div class="push-meta"><span class="push-dot"></span> 多点优选 · 今日餐桌</div><h1 class="push-title">${escapeHtml(result.push_message||'今晚吃什么？让 Dmall 帮你配好一桌菜')}</h1><p class="push-body">${escapeHtml(result.cross_sell||'食材现配现选，到家即可开炒。')}</p><div class="push-cta"><span>${escapeHtml(result.scenario_tag||'今日限定组合')}</span><span>查看组合 ›</span></div></section>
+    <h2 class="section-title">今晚推荐组合</h2><section class="menu-list">${menus||'<div class="error">暂无可展示的菜品组合</div>'}</section>
+    <div class="benefit"><i>⚡</i><span>新鲜食材按需配齐，减少挑选时间，把今天的晚餐交给多点。</span></div>
+    <div class="status ${state}">${decisionText(plan.decision)}</div>
+    <button class="back" onclick="history.back()">返回运营驾驶舱</button>`;
+}
+
+async function init(){
+  if(!planId){document.getElementById('appContent').innerHTML='<div class="error">缺少推荐方案，请从运营驾驶舱进入。</div>';return;}
+  try{const response=await fetch(`/api/recommendations/${encodeURIComponent(planId)}`);if(!response.ok)throw new Error('方案不存在');renderPage(await response.json());}
+  catch(error){document.getElementById('appContent').innerHTML=`<div class="error">${escapeHtml(error.message)}，请返回运营驾驶舱重新生成。</div>`;}
+}
+init();
+</script>
+</body>
+</html>

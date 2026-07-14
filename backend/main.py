@@ -3,11 +3,14 @@ FastAPI 后端服务 —— API 端点与静态文件服务
 
 API 端点:
   GET  /                    → 前端主页
-  GET  /recipe.html         → 菜谱页模板
+    GET  /dmall-member        → Dmall 会员 App 模拟页
+    GET  /store-dashboard     → 门店负责人决策大屏
   GET  /api/health          → 健康检查（含 LLM 状态）
   GET  /api/data/files      → 列出可用数据文件
   GET  /api/data/{filename} → 加载数据文件
   POST /api/generate        → SSE 流式生成（LLM Agentic Workflow）
+    GET  /api/recommendations/{plan_id}          → 获取待确认方案
+    POST /api/recommendations/{plan_id}/decision → 负责人接受或拒绝方案
   GET  /api/memory/cases    → 列出 Memory 中的历史样例
   GET  /recipes/{filename}  → 已部署的菜谱页面
 """
@@ -48,6 +51,10 @@ class GenerateRequest(BaseModel):
     options: Optional[dict] = None
 
 
+class RecommendationDecisionRequest(BaseModel):
+    accepted: bool
+
+
 # ==================== 路由 ====================
 
 @app.get("/")
@@ -66,6 +73,24 @@ async def recipe_template():
     if not recipe_path.exists():
         raise HTTPException(404, "菜谱页模板未找到")
     return FileResponse(str(recipe_path))
+
+
+@app.get("/dmall-member")
+async def dmall_member():
+    """Dmall 会员 App 模拟页"""
+    page_path = config.FRONTEND_DIR / "dmall-member.html"
+    if not page_path.exists():
+        raise HTTPException(404, "前端文件未找到")
+    return FileResponse(str(page_path))
+
+
+@app.get("/store-dashboard")
+async def store_dashboard():
+    """门店负责人决策大屏"""
+    page_path = config.FRONTEND_DIR / "store-dashboard.html"
+    if not page_path.exists():
+        raise HTTPException(404, "前端文件未找到")
+    return FileResponse(str(page_path))
 
 
 @app.get("/api/health")
@@ -154,6 +179,27 @@ async def generate(req: GenerateRequest):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@app.get("/api/recommendations/{plan_id}")
+async def get_recommendation(plan_id: str):
+    """获取指定的待确认推荐方案。"""
+    recommendation = memory_store.get_recommendation(plan_id)
+    if recommendation is None:
+        raise HTTPException(404, "推荐方案不存在或已被清理")
+    return recommendation
+
+
+@app.post("/api/recommendations/{plan_id}/decision")
+async def decide_recommendation(plan_id: str, req: RecommendationDecisionRequest):
+    """确认方案并将结果作为成功或失败样例写入 Memory。"""
+    decision = memory_store.decide_recommendation(plan_id, req.accepted)
+    if decision is None:
+        raise HTTPException(404, "推荐方案不存在或已被清理")
+    return {
+        **decision,
+        "memory_count": memory_store.count(),
+    }
 
 
 @app.get("/api/memory/cases")

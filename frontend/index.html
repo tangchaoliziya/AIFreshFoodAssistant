@@ -117,18 +117,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .pkg-items .it:last-child{border-bottom:none}
 
 /* ===== 触达矩阵 ===== */
-.reach-tabs{display:flex;border-bottom:1px solid var(--line2);padding:0 12px}
-.reach-tabs button{padding:10px 10px;font-size:12px;color:var(--ink2);border-bottom:2px solid transparent;font-weight:500}
-.reach-tabs button.active{color:var(--brand-d);border-bottom-color:var(--brand);font-weight:600}
-.reach-panel{padding:14px 16px;display:none}
-.reach-panel.active{display:block}
-.app-push{background:linear-gradient(135deg,#1e293b,#334155);border-radius:14px;padding:16px;color:#fff}
-.app-push .ph-title{font-size:14px;font-weight:700;margin:8px 0}
-.app-push .ph-body{font-size:12px;color:#cbd5e1;line-height:1.55}
-.staff-task{display:flex;gap:10px;padding:10px 12px;background:var(--line2);border-radius:10px;border-left:3px solid var(--brand);margin-bottom:8px}
-.staff-task .st-no{width:22px;height:22px;border-radius:6px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
-.staff-task .st-txt{font-size:12px}
-.staff-task .st-txt .when{display:block;font-size:10.5px;color:var(--ink3);margin-top:2px}
+.reach-nav{display:flex;flex-direction:column;padding:12px;gap:10px}
+.reach-link{display:flex;align-items:center;width:100%;gap:11px;padding:12px;background:var(--line2);border:1px solid transparent;border-radius:9px;text-align:left;transition:.2s}
+.reach-link:hover{background:#fff;border-color:var(--brand);box-shadow:var(--shadow)}
+.reach-link .nav-icon{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:8px;font-size:17px;flex-shrink:0}
+.reach-link .nav-copy{min-width:0;flex:1}
+.reach-link .nav-title{display:block;font-size:12.5px;font-weight:700;color:var(--ink)}
+.reach-link .nav-sub{display:block;font-size:10.5px;color:var(--ink3);margin-top:2px}
+.reach-link .nav-arrow{font-size:18px;color:var(--ink3)}
 
 /* ===== 价值预估 ===== */
 .value-card{margin-top:16px}
@@ -313,9 +309,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <div class="card-body" id="pkgBody"></div>
     </div>
     <div class="card" id="reachCard" style="display:none">
-      <div class="card-head"><div class="h-icon" style="background:var(--purple-l);color:var(--purple)">📡</div><h3>全渠道触达矩阵</h3><span class="sub">理想化展示数据</span></div>
-      <div class="reach-tabs" id="reachTabs"></div>
-      <div id="reachPanels"></div>
+      <div class="card-head"><div class="h-icon" style="background:var(--purple-l);color:var(--purple)">📡</div><h3>全渠道触达矩阵</h3><span class="sub">待负责人确认</span></div>
+      <div class="reach-nav" id="reachNav"></div>
     </div>
   </div>
 
@@ -341,6 +336,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 let currentData=null;
 let currentResult=null;
 let recipeUrls={};
+let currentPlanId=null;
 let generating=false;
 
 /* ============================================================ 初始化 ============================================================ */
@@ -504,6 +500,7 @@ function renderDataViz(d){
 }
 
 function resetEngine(){
+  currentPlanId=null;
   document.getElementById('engineIdle').style.display='block';
   document.getElementById('statusLog').style.display='none';
   document.getElementById('statusLog').innerHTML='';
@@ -623,14 +620,15 @@ async function generate(){
             const result=evt.content;
             currentResult=result.result;
             recipeUrls=result.recipe_urls||{};
+            currentPlanId=result.plan_id||null;
             // 最终 Markdown 渲染
             if(showThinking&&thinkingText) renderMarkdown('thinkingBody',thinkingText);
             if(outputText) renderMarkdown('outputBody',outputText);
             if(showThinking) document.getElementById('thinkingBadge').textContent='完成';
             document.getElementById('outputBadge').textContent='完成';
             renderResult(result);
-            document.getElementById('engineStatus').textContent='✅ 生成完成';
-            statusLog.innerHTML+=`<div class="status-log" style="color:var(--green)">✅ ${result.mock_mode?'Mock模式':''} 生成完成 · Memory: ${result.memory_count}条</div>`;
+            document.getElementById('engineStatus').textContent='⏳ 待负责人确认';
+            statusLog.innerHTML+=`<div class="status-log" style="color:var(--amber)">⏳ ${result.mock_mode?'Mock模式':''} 方案已生成，等待负责人确认 · Memory: ${result.memory_count}条</div>`;
           }else if(evt.type==='error'){
             statusLog.innerHTML+=`<div class="status-log" style="color:var(--red)">❌ ${evt.content}</div>`;
             document.getElementById('engineStatus').textContent='错误';
@@ -669,7 +667,7 @@ function renderResult(data){
   // 场景包
   renderPackage(r);
   // 触达矩阵
-  renderReach(r);
+  renderReach(data.plan_id);
   // 价值预估
   renderValue(r);
 }
@@ -689,27 +687,24 @@ function renderPackage(r){
   document.getElementById('pkgBody').innerHTML=html;
 }
 
-function renderReach(r){
+function renderReach(planId){
   document.getElementById('reachCard').style.display='block';
   document.getElementById('reachCard').classList.add('fade-up');
-  const tabs=[{k:'push',i:'📱',l:'会员App'},{k:'staff',i:'👔',l:'员工指令'},{k:'display',i:'🗺️',l:'陈列图'}];
-  document.getElementById('reachTabs').innerHTML=tabs.map((t,i)=>`<button class="${i===0?'active':''}" onclick="switchReach(this,'${t.k}')">${t.i} ${t.l}</button>`).join('');
-
-  let panels='';
-  panels+=`<div class="reach-panel active" data-k="push"><div class="app-push"><div style="font-size:12px;color:#94a3b8">鲜超优选 · 会员推送</div><div class="ph-title">${r.push_message||''}</div><div class="ph-body">${r.cross_sell||''}</div></div></div>`;
-
-  panels+=`<div class="reach-panel" data-k="staff">${(r.staff_instructions||[]).map((s,i)=>`<div class="staff-task"><div class="st-no">${i+1}</div><div class="st-txt">${s.task}<span class="when">⏰ ${s.deadline||''}</span></div></div>`).join('')}</div>`;
-
-  const dp=r.display_plan||{};
-  panels+=`<div class="reach-panel" data-k="display"><div style="background:var(--line2);border-radius:10px;padding:12px;height:160px;position:relative"><div style="position:absolute;left:8px;top:8px;width:40%;height:34px;background:var(--blue);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600">🚪 ${dp.entrance||''}</div><div style="position:absolute;left:8px;top:50px;width:54%;height:60px;background:var(--brand);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600">📦 ${dp.main||''}</div><div style="position:absolute;right:8px;top:8px;width:36%;height:46px;background:var(--warm);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600">🥬 ${dp.side||''}</div><div style="position:absolute;right:8px;top:62px;width:36%;height:48px;background:var(--purple);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600">🍚 ${dp.cooked||''}</div></div></div>`;
-
-  document.getElementById('reachPanels').innerHTML=panels;
+  document.getElementById('reachNav').innerHTML=`
+    <button class="reach-link" onclick="openChannelPage('/dmall-member', '${planId||''}')">
+      <span class="nav-icon">📱</span><span class="nav-copy"><span class="nav-title">Dmall 会员 App</span><span class="nav-sub">查看今日会员推送方案</span></span><span class="nav-arrow">›</span>
+    </button>
+    <button class="reach-link" onclick="openChannelPage('/store-dashboard', '${planId||''}')">
+      <span class="nav-icon">🏪</span><span class="nav-copy"><span class="nav-title">门店负责人决策大屏</span><span class="nav-sub">查看陈列、员工任务并确认执行</span></span><span class="nav-arrow">›</span>
+    </button>`;
 }
 
-function switchReach(btn,k){
-  document.querySelectorAll('#reachTabs button').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.reach-panel').forEach(p=>p.classList.toggle('active',p.dataset.k===k));
+function openChannelPage(path,planId){
+  if(!planId){
+    alert('当前方案未保存，请重新生成后再访问。');
+    return;
+  }
+  window.location.href=`${path}?plan_id=${encodeURIComponent(planId)}`;
 }
 
 function renderValue(r){

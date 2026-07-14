@@ -86,9 +86,11 @@ python run.py --port 8080
 2. **查看数据**：数据可视化展示（库存/临期/天气/社区/客流）
 3. **生成方案**：点击「生成今日方案」→ LLM Agentic Workflow 启动
 4. **查看推理**：实时流式展示 LLM 思维链（Memory检索→Prompt组装→LLM推理）
-5. **查看结果**：推荐菜单卡片 + 场景包 + 触达矩阵 + 价值预估
-6. **查看菜谱**：点击菜单卡片 → 弹出完整菜谱（食材分量+步骤+贴士）
-7. **扫码分享**：菜谱弹窗底部二维码 → 手机扫码打开云端菜谱页
+5. **查看结果**：推荐菜单卡片、场景包和价值预估；生成方案进入待负责人确认状态
+6. **查看触达**：从全渠道触达矩阵进入 Dmall 会员 App 模拟推送页或门店负责人决策大屏
+7. **确认执行**：负责人在决策大屏接受或拒绝方案；接受写入成功 Memory，拒绝写入失败 Memory，未决策方案不写入 Memory
+8. **查看菜谱**：点击菜单卡片 → 弹出完整菜谱（食材分量+步骤+贴士）
+9. **扫码分享**：菜谱弹窗底部二维码 → 手机扫码打开云端菜谱页
 
 ---
 
@@ -135,6 +137,10 @@ python run.py --port 8080
 | GET | `/api/data/{filename}` | 加载数据文件 |
 | POST | `/api/upload` | 上传数据文件 |
 | POST | `/api/generate` | SSE流式生成（LLM Agentic Workflow） |
+| GET | `/dmall-member?plan_id={id}` | Dmall 会员 App 模拟推送页 |
+| GET | `/store-dashboard?plan_id={id}` | 门店负责人决策大屏 |
+| GET | `/api/recommendations/{plan_id}` | 读取待确认方案 |
+| POST | `/api/recommendations/{plan_id}/decision` | 接受或拒绝方案并写入 Memory |
 | GET | `/api/memory/cases` | 列出Memory历史样例 |
 | POST | `/api/memory/seed` | 注入种子样例 |
 | GET | `/recipes/{filename}` | 已部署的菜谱页面 |

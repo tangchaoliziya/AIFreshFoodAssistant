@@ -17,6 +17,7 @@ Memory 模块 —— 基于 SQLite 的历史成功样例存储与检索
 """
 import sqlite3
 import json
+import uuid
 from datetime import datetime
 from typing import Optional
 from pathlib import Path
@@ -46,6 +47,18 @@ class MemoryStore:
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_successful
             ON memory_cases(is_successful)
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS pending_recommendations (
+                plan_id        TEXT PRIMARY KEY,
+                created_at     TEXT NOT NULL,
+                input_context  TEXT NOT NULL,
+                output         TEXT NOT NULL,
+                recipe_urls    TEXT NOT NULL,
+                decision       TEXT,
+                decided_at     TEXT,
+                memory_case_id INTEGER
+            )
         """)
         conn.commit()
         conn.close()
@@ -77,6 +90,104 @@ class MemoryStore:
         conn.commit()
         conn.close()
         return case_id
+
+    def create_pending_recommendation(
+        self,
+        input_context: dict,
+        output: dict,
+        recipe_urls: dict,
+    ) -> str:
+        """保存待门店负责人确认的方案，不写入 Memory 样例。"""
+        plan_id = uuid.uuid4().hex
+        conn = sqlite3.connect(self.db_path)
+        conn.execute(
+            """INSERT INTO pending_recommendations
+               (plan_id, created_at, input_context, output, recipe_urls)
+               VALUES (?, ?, ?, ?, ?)""",
+            (
+                plan_id,
+                datetime.now().isoformat(),
+                json.dumps(input_context, ensure_ascii=False),
+                json.dumps(output, ensure_ascii=False),
+                json.dumps(recipe_urls, ensure_ascii=False),
+            ),
+        )
+        conn.commit()
+        conn.close()
+        return plan_id
+
+    def get_recommendation(self, plan_id: str) -> Optional[dict]:
+        """读取待确认方案及其当前决策状态。"""
+        conn = sqlite3.connect(self.db_path)
+        row = conn.execute(
+            """SELECT plan_id, created_at, input_context, output, recipe_urls,
+                      decision, decided_at, memory_case_id
+               FROM pending_recommendations WHERE plan_id = ?""",
+            (plan_id,),
+        ).fetchone()
+        conn.close()
+        if row is None:
+            return None
+        return {
+            "plan_id": row[0],
+            "created_at": row[1],
+            "input_context": json.loads(row[2]),
+            "result": json.loads(row[3]),
+            "recipe_urls": json.loads(row[4]),
+            "decision": row[5],
+            "decided_at": row[6],
+            "memory_case_id": row[7],
+        }
+
+    def decide_recommendation(self, plan_id: str, accepted: bool) -> Optional[dict]:
+        """确认方案并写入 Memory；同一方案只能被处理一次。"""
+        conn = sqlite3.connect(self.db_path)
+        row = conn.execute(
+            """SELECT input_context, output, decision, memory_case_id
+               FROM pending_recommendations WHERE plan_id = ?""",
+            (plan_id,),
+        ).fetchone()
+        if row is None:
+            conn.close()
+            return None
+
+        if row[2] is not None:
+            conn.close()
+            return {
+                "decision": row[2],
+                "memory_case_id": row[3],
+                "already_decided": True,
+            }
+
+        decision = "accepted" if accepted else "rejected"
+        output = json.loads(row[1])
+        cursor = conn.execute(
+            """INSERT INTO memory_cases
+               (timestamp, input_context, output, metrics, is_successful, tags)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (
+                datetime.now().isoformat(),
+                row[0],
+                row[1],
+                json.dumps(output.get("value_estimate"), ensure_ascii=False),
+                accepted,
+                ",".join([output.get("scenario_tag", ""), decision]),
+            ),
+        )
+        memory_case_id = cursor.lastrowid
+        conn.execute(
+            """UPDATE pending_recommendations
+               SET decision = ?, decided_at = ?, memory_case_id = ?
+               WHERE plan_id = ?""",
+            (decision, datetime.now().isoformat(), memory_case_id, plan_id),
+        )
+        conn.commit()
+        conn.close()
+        return {
+            "decision": decision,
+            "memory_case_id": memory_case_id,
+            "already_decided": False,
+        }
 
     def retrieve_cases(self, current_context: dict, top_k: int = 5) -> list:
         """

@@ -120,21 +120,19 @@ class LLMEngine:
 
             recipe_urls = self._deploy_recipe_pages(result, input_data)
 
-            # ===== Step 6: Memory 存储 =====
-            yield self._sse("status", "正在将本次结果存入 Memory...")
+            # ===== Step 6: 等待门店负责人决策 =====
+            yield self._sse("status", "方案已生成，等待门店负责人确认...")
             await asyncio.sleep(0.2)
-
-            self.memory.store_case(
+            plan_id = self.memory.create_pending_recommendation(
                 input_context=input_data,
                 output=result,
-                metrics=result.get("value_estimate"),
-                is_successful=True,
-                tags=[result.get("scenario_tag", "")],
+                recipe_urls=recipe_urls,
             )
 
             # ===== 完成 =====
-            yield self._sse("status", "✅ 生成完成！")
+            yield self._sse("status", "✅ 生成完成，待门店负责人决策")
             yield self._sse("done", {
+                "plan_id": plan_id,
                 "result": result,
                 "recipe_urls": recipe_urls,
                 "raw_thinking": raw_thinking,
