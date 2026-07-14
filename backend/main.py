@@ -38,11 +38,13 @@ app = FastAPI(
 
 # 挂载静态目录
 app.mount("/recipes", StaticFiles(directory=str(config.RECIPES_DIR)), name="recipes")
+app.mount("/assets", StaticFiles(directory=str(config.FRONTEND_DIR)), name="assets")
 
 
 # ==================== 数据模型 ====================
 class GenerateRequest(BaseModel):
     data: dict
+    enable_thinking: bool = True
     options: Optional[dict] = None
 
 
@@ -140,7 +142,7 @@ async def generate(req: GenerateRequest):
     返回 text/event-stream，前端通过 EventSource 接收
     """
     async def event_stream():
-        async for event in llm_engine.generate(req.data):
+        async for event in llm_engine.generate(req.data, enable_thinking=req.enable_thinking):
             yield event
 
     return StreamingResponse(

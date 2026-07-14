@@ -41,8 +41,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 
 /* ===== 布局 ===== */
 .app{max-width:1640px;margin:0 auto;padding:18px 20px 40px}
-.grid{display:grid;grid-template-columns:320px 1fr 360px;gap:16px;align-items:start}
-.col{display:flex;flex-direction:column;gap:16px}
+.grid{display:grid;grid-template-columns:320px minmax(0,1fr) 360px;gap:16px;align-items:start}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
 
 /* ===== 卡片 ===== */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
@@ -167,11 +167,63 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .rm-steps li::before{counter-increment:step;content:counter(step);position:absolute;left:0;top:7px;width:26px;height:26px;border-radius:50%;background:var(--brand-l);color:var(--brand-d);display:flex;align-items:center;justify-content:center;font-weight:700}
 .rm-tips{background:var(--warm-l);border-radius:10px;padding:12px 14px;font-size:12.5px;color:#92400e}
 .rm-qr{display:flex;align-items:center;gap:16px;padding:18px 24px;background:linear-gradient(135deg,var(--brand-l),#f0fdfa)}
-.rm-qr-img{width:120px;height:120px;background:#fff;padding:8px;border-radius:12px;flex-shrink:0}
-.rm-qr-img svg{width:100%;height:100%}
+.rm-qr-img{width:156px;height:156px;background:#fff;padding:8px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.rm-qr-img img{display:block!important}
+.rm-qr-img canvas{display:none!important}
+.rm-qr-img table{display:none!important}
 .rm-qr-info h5{font-size:13px;font-weight:700}
 .rm-qr-info p{font-size:11.5px;color:var(--ink2);margin-top:4px}
 .rm-qr-url{font-size:10px;color:var(--ink3);margin-top:6px;word-break:break-all;font-family:monospace}
+
+/* ===== 思考模式开关 ===== */
+.think-toggle{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);padding:7px 14px;border-radius:10px;font-size:12px;color:#bfe3e1;transition:.2s;border:1px solid transparent}
+.think-toggle:hover{background:rgba(255,255,255,.12)}
+.think-toggle:disabled{opacity:.65;cursor:not-allowed}
+.think-toggle.active{background:rgba(99,102,241,.25);border-color:rgba(99,102,241,.4);color:#c7d2fe}
+.think-toggle .think-icon{font-size:14px}
+
+/* ===== 双面板思维链 ===== */
+.dual-panel{display:flex;flex-direction:column;gap:12px;margin:10px auto 0;min-width:0;width:100%;max-width:900px}
+.panel-thinking,.panel-output{min-width:0;max-width:100%}
+.panel-thinking{background:#1e1b2e;border:1px solid #312e4f;border-radius:12px;overflow:hidden}
+.panel-thinking-head{padding:10px 14px;background:#2d2a4a;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.panel-thinking-head h4{font-size:12.5px;color:#a78bfa;font-weight:700}
+.panel-thinking-head .badge{font-size:10px;padding:2px 8px;border-radius:5px;background:#4c1d95;color:#ddd6fe;font-weight:600;margin-left:auto}
+.panel-thinking-head .arrow{color:#6b7280;transition:.2s;font-size:12px}
+.panel-thinking.collapsed .arrow{transform:rotate(-90deg)}
+.panel-thinking-body{padding:14px 16px;max-height:350px;overflow:auto;overflow-wrap:anywhere;font-size:12.5px;line-height:1.7;color:#c4b5fd;font-family:"Cascadia Code","Fira Code",Consolas,monospace}
+.panel-thinking.collapsed .panel-thinking-body{display:none}
+.panel-thinking-body::-webkit-scrollbar-thumb{background:#4c1d95}
+.panel-thinking-body .md-content{font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:#e0e0ff}
+.panel-thinking-body .md-content h1,.panel-thinking-body .md-content h2,.panel-thinking-body .md-content h3{color:#a78bfa;margin:8px 0 4px}
+.panel-thinking-body .md-content p{margin:4px 0}
+.panel-thinking-body .md-content ul,.panel-thinking-body .md-content ol{margin:4px 0;padding-left:20px}
+.panel-thinking-body .md-content li{margin:2px 0}
+.panel-thinking-body .md-content code{background:#2d2a4a;padding:1px 5px;border-radius:4px;font-size:11px;color:#fbbf24}
+.panel-thinking-body .md-content pre{background:#1a1726;border-radius:8px;padding:10px;max-width:100%;overflow-x:auto;margin:6px 0}
+.panel-thinking-body .md-content pre code{background:none;padding:0;color:#e0e0ff}
+.panel-thinking-body .md-content strong{color:#c4b5fd}
+.panel-thinking-body .md-content blockquote{border-left:3px solid #6d28d9;padding-left:10px;margin:6px 0;color:#9ca3af}
+
+.panel-output{background:#0f172a;border:1px solid #1e293b;border-radius:12px;overflow:hidden}
+.panel-output-head{padding:10px 14px;background:#1e293b;display:flex;align-items:center;gap:8px}
+.panel-output-head h4{font-size:12.5px;color:#67e8f9;font-weight:700}
+.panel-output-head .badge{font-size:10px;padding:2px 8px;border-radius:5px;background:#0e7490;color:#cffafe;font-weight:600;margin-left:auto}
+.panel-output-body{padding:14px 16px;max-height:450px;overflow:auto;overflow-wrap:anywhere;font-size:13px;line-height:1.7;color:#cbd5e1}
+.panel-output-body::-webkit-scrollbar-thumb{background:#334155}
+.panel-output-body .md-content h1,.panel-output-body .md-content h2,.panel-output-body .md-content h3{color:#f1f5f9;margin:10px 0 6px;font-weight:700}
+.panel-output-body .md-content h1{font-size:18px}.panel-output-body .md-content h2{font-size:16px}.panel-output-body .md-content h3{font-size:14px}
+.panel-output-body .md-content p{margin:6px 0}
+.panel-output-body .md-content ul,.panel-output-body .md-content ol{margin:6px 0;padding-left:22px}
+.panel-output-body .md-content li{margin:3px 0}
+.panel-output-body .md-content code{background:#1e293b;padding:1px 5px;border-radius:4px;font-size:12px;color:#fbbf24}
+.panel-output-body .md-content pre{background:#1a1726;border:1px solid #334155;border-radius:8px;padding:12px;max-width:100%;overflow-x:auto;margin:8px 0}
+.panel-output-body .md-content pre code{background:none;padding:0;color:#e2e8f0;font-size:12px}
+.panel-output-body .md-content strong{color:#f1f5f9}
+.panel-output-body .md-content blockquote{border-left:3px solid #0891b2;padding-left:10px;margin:6px 0;color:#94a3b8}
+.panel-output-body .md-content table{border-collapse:collapse;width:100%;max-width:100%;table-layout:fixed;margin:8px 0}
+.panel-output-body .md-content th,.panel-output-body .md-content td{border:1px solid #334155;padding:5px 8px;text-align:left;font-size:12px}
+.panel-output-body .md-content th{background:#1e293b;font-weight:600}
 
 /* ===== 响应式 ===== */
 @media(max-width:1280px){.grid{grid-template-columns:1fr}.value-grid{grid-template-columns:repeat(2,1fr)}}
@@ -188,6 +240,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   </div>
   <div class="topbar-right">
     <div class="status-chip" id="statusChip"><span class="status-dot" id="statusDot"></span><span id="statusText">检测中...</span></div>
+    <button class="think-toggle active" id="thinkToggle" onclick="toggleThinking()">
+      <span class="think-icon" id="thinkIcon">🧠</span>
+      <span id="thinkLabel">深度思考</span>
+    </button>
     <button class="gen-btn" id="genBtn" disabled onclick="generate()"><span>⚡</span><span id="genBtnText">生成今日方案</span></button>
   </div>
 </div>
@@ -228,7 +284,20 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
           <p class="hint">LLM 将根据 Memory 历史样例 + Skills 领域知识 + 当日数据推理生成菜单候选</p>
         </div>
         <div id="statusLog" style="display:none"></div>
-        <div class="thinking-chain" id="thinkingChain" style="display:none"></div>
+        <div class="dual-panel" id="dualPanel" style="display:none">
+          <div class="panel-thinking" id="panelThinking">
+            <div class="panel-thinking-head" onclick="togglePanel('panelThinking')">
+              <span>🧠</span><h4>深度思考</h4><span class="badge" id="thinkingBadge">思考中...</span><span class="arrow">▼</span>
+            </div>
+            <div class="panel-thinking-body" id="thinkingBody"></div>
+          </div>
+          <div class="panel-output" id="panelOutput">
+            <div class="panel-output-head">
+              <span>📄</span><h4>生成结果</h4><span class="badge" id="outputBadge">等待生成</span>
+            </div>
+            <div class="panel-output-body" id="outputBody"></div>
+          </div>
+        </div>
         <div class="menu-out" id="menuOut">
           <div class="card-head" style="border:none;padding:6px 0 10px"><div class="h-icon" style="background:var(--warm-l);color:var(--warm)">📋</div><h3>今日推荐菜单候选</h3><span class="sub" id="menuMeta"></span></div>
           <div class="menu-grid" id="menuGrid"></div>
@@ -265,10 +334,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   <div class="modal" id="recipeModalInner"></div>
 </div>
 
+<script src="/assets/qrcode.min.js"></script>
+<script src="/assets/marked.min.js"></script>
 <script>
-/* ============================================================ QR Code 生成器 (纯JS, byte mode, ECC L, V1-V5) ============================================================ */
-const QRGen=(function(){const E=new Uint8Array(512),L=new Uint8Array(256);let x=1;for(let i=0;i<255;i++){E[i]=x;L[x]=i;x<<=1;if(x&0x100)x^=0x11d;}for(let i=255;i<512;i++)E[i]=E[i-255];const m=(a,b)=>!a||!b?0:E[L[a]+L[b]];function g(n){let p=[1];for(let i=0;i<n;i++){let q=new Array(p.length+1).fill(0);for(let j=0;j<p.length;j++){q[j]^=p[j];q[j+1]^=m(p[j],E[i]);}p=q;}return p;}function rs(d,n){const G=g(n),r=new Array(n).fill(0);for(let i=0;i<d.length;i++){const f=d[i]^r[0];r.shift();r.push(0);if(f)for(let j=0;j<n;j++)r[j]^=m(G[j+1],f);}return r;}const DC=[19,34,55,80,108],EC=[7,10,15,20,26],AL=[[],[6,18],[6,22],[6,26],[6,30]];function tb(s){const a=[];for(let i=0;i<s.length;i++){let c=s.charCodeAt(i);if(c<128)a.push(c);else if(c<2048){a.push(192|(c>>6),128|(c&63));}else{a.push(224|(c>>12),128|((c>>6)&63),128|(c&63));}}return a;}function sv(n){for(let v=0;v<5;v++)if(n<=DC[v]-2)return v+1;return 5;}function mc(b,v){const bits=[];bits.push(0,1,0,0);const len=Math.min(b.length,DC[v-1]-2);for(let i=7;i>=0;i--)bits.push((len>>i)&1);for(let j=0;j<len;j++)for(let i=7;i>=0;i--)bits.push((b[j]>>i)&1);const tb2=DC[v-1]*8;for(let i=0;i<4&&bits.length<tb2;i++)bits.push(0);while(bits.length%8)bits.push(0);const cw=[];for(let i=0;i<bits.length;i+=8){let b2=0;for(let j=0;j<8;j++)b2=(b2<<1)|bits[i+j];cw.push(b2);}const pad=[236,17];let pi=0;while(cw.length<DC[v-1])cw.push(pad[pi++%2]);return cw;}function pf(m,r,c){for(let dr=0;dr<7;dr++)for(let dc=0;dc<7;dc++){const b=(dr===0||dr===6||dc===0||dc===6),in2=(dr>=2&&dr<=4&&dc>=2&&dc<=4);m[r+dr][c+dc]=b||in2;}}function bm(d,v){const s=17+4*v,m=[],R=[];for(let i=0;i<s;i++){m.push(new Array(s).fill(null));R.push(new Array(s).fill(false));}for(let i=0;i<8;i++)for(let j=0;j<8;j++){R[i][j]=R[i][s-8+j]=R[s-8+i][j]=true;m[i][j]=m[i][s-8+j]=m[s-8+i][j]=false;}pf(m,0,0);pf(m,0,s-7);pf(m,s-7,0);const ap=AL[v-1];for(let i=0;i<ap.length;i++)for(let j=0;j<ap.length;j++){const r=ap[i],c=ap[j];if((r<=8&&c<=8)||(r<=8&&c>=s-9)||(r>=s-9&&c<=8))continue;for(let dr=-2;dr<=2;dr++)for(let dc=-2;dc<=2;dc++){const dk=(Math.abs(dr)===2)||(Math.abs(dc)===2)||(dr===0&&dc===0);m[r+dr][c+dc]=dk;R[r+dr][c+dc]=true;}}for(let i=8;i<s-8;i++){if(!R[6][i]){m[6][i]=(i%2===0);R[6][i]=true;}if(!R[i][6]){m[i][6]=(i%2===0);R[i][6]=true;}}for(let i=0;i<9;i++){if(i!==6&&!R[8][i]){R[8][i]=true;m[8][i]=false;}if(i!==6&&!R[i][8]){R[i][8]=true;m[i][8]=false;}}for(let i=0;i<8;i++){if(!R[8][s-1-i]){R[8][s-1-i]=true;m[8][s-1-i]=false;}if(!R[s-1-i][8]){R[s-1-i][8]=true;m[s-1-i][8]=false;}}m[s-8][8]=true;R[s-8][8]=true;let bi=0,dir=-1;for(let col=s-1;col>0;col-=2){if(col===6)col=5;for(let i=0;i<s;i++){const row=dir<0?s-1-i:i;for(let dc=0;dc<2;dc++){const c=col-dc;if(c<0||R[row][c])continue;const by=bi>>3,bb=7-(bi&7);m[row][c]=(by<d.length?((d[by]>>bb)&1):0)===1;bi++;}}dir=-dir;}return{m,R,s};}const MK=[(r,c)=>(r+c)%2===0,(r,c)=>r%2===0,(r,c)=>c%3===0,(r,c)=>(r+c)%3===0,(r,c)=>(Math.floor(r/2)+Math.floor(c/3))%2===0,(r,c)=>((r*c)%2)+((r*c)%3)===0,(r,c)=>(((r*c)%2)+((r*c)%3))%2===0,(r,c)=>(((r+c)%2)+((r*c)%3))%2===0];function am(m,R,s,f){const c=m.map(r=>r.slice());for(let r=0;r<s;r++)for(let j=0;j<s;j++)if(!R[r][j]&&f(r,j))c[r][j]=!c[r][j];return c;}function pn(m,s){let p=0;for(let r=0;r<s;r++){let run=1;for(let c=1;c<s;c++){if(m[r][c]===m[r][c-1]){run++;if(run===5)p+=3;else if(run>5)p++;}else run=1;}}for(let c=0;c<s;c++){let run=1;for(let r=1;r<s;r++){if(m[r][c]===m[r-1][c]){run++;if(run===5)p+=3;else if(run>5)p++;}else run=1;}}for(let r=0;r<s-1;r++)for(let c=0;c<s-1;c++)if(m[r][c]===m[r][c+1]&&m[r][c]===m[r+1][c]&&m[r][c]===m[r+1][c+1])p+=3;let dk=0;for(let r=0;r<s;r++)for(let c=0;c<s;c++)if(m[r][c])dk++;const pct=dk*100/(s*s);p+=Math.floor(Math.abs(pct-50)/5)*10;return p;}function pf2(m,R,s,mi){const d=(1<<3|mi)<<10;let rem=d;for(let i=14;i>=10;i--)if(rem&(1<<i))rem^=0b10100110111<<(i-10);let f=(d|rem)^0b101010000010010;const b=[];for(let i=14;i>=0;i--)b.push((f>>i)&1);for(let i=0;i<=5;i++)m[8][i]=b[14-i]===1;m[8][7]=b[8]===1;m[8][8]=b[7]===1;m[7][8]=b[6]===1;for(let i=5;i>=0;i--)m[i][8]=b[5-i]===1;for(let i=0;i<7;i++)m[s-1-i][8]=b[14-i]===1;for(let i=0;i<8;i++)m[8][s-8+i]=b[7-i]===1;}function gen(text){const b=tb(text),v=sv(b.length),dc=mc(b,v),ec=rs(dc,EC[v-1]),all=dc.concat(ec),{m,R,s}=bm(all,v);let bm2=null,bp=Infinity;for(let i=0;i<8;i++){const ma=am(m,R,s,MK[i]);pf2(ma,R,s,i);const p=pn(ma,s);if(p<bp){bp=p;bm2=ma;}}return{matrix:bm2,size:s,version:v};}function svg(m,s){let c='';for(let r=0;r<s;r++)for(let j=0;j<s;j++)if(m[r][j])c+=`<rect x="${j}" y="${r}" width="1" height="1"/>`;return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${s} ${s}" shape-rendering="crispEdges">${c}</svg>`;}return{generate:gen,toSVG:svg};})();
-
 /* ============================================================ 全局状态 ============================================================ */
 let currentData=null;
 let currentResult=null;
@@ -439,8 +507,9 @@ function resetEngine(){
   document.getElementById('engineIdle').style.display='block';
   document.getElementById('statusLog').style.display='none';
   document.getElementById('statusLog').innerHTML='';
-  document.getElementById('thinkingChain').style.display='none';
-  document.getElementById('thinkingChain').innerHTML='';
+  document.getElementById('dualPanel').style.display='none';
+  document.getElementById('thinkingBody').innerHTML='';
+  document.getElementById('outputBody').innerHTML='';
   document.getElementById('menuOut').style.display='none';
   document.getElementById('engineStatus').textContent='待命';
   document.getElementById('pkgCard').style.display='none';
@@ -448,40 +517,83 @@ function resetEngine(){
   document.getElementById('valueCard').style.display='none';
 }
 
+/* ============================================================ 思考模式开关 ============================================================ */
+let thinkingEnabled=true;
+function toggleThinking(){
+  thinkingEnabled=!thinkingEnabled;
+  const btn=document.getElementById('thinkToggle');
+  const icon=document.getElementById('thinkIcon');
+  const label=document.getElementById('thinkLabel');
+  const thinkingPanel=document.getElementById('panelThinking');
+  if(thinkingEnabled){
+    btn.classList.add('active');
+    icon.textContent='🧠';label.textContent='深度思考';
+    thinkingPanel.style.display='';
+  }else{
+    btn.classList.remove('active');
+    icon.textContent='⚡';label.textContent='标准模式';
+    thinkingPanel.style.display='none';
+  }
+}
+
+function togglePanel(id){
+  document.getElementById(id).classList.toggle('collapsed');
+}
+
+/* Markdown 渲染（防抖更新） */
+let mdRenderTimer=null;
+function renderMarkdown(elId,rawText){
+  if(mdRenderTimer) clearTimeout(mdRenderTimer);
+  mdRenderTimer=setTimeout(()=>{
+    const el=document.getElementById(elId);
+    if(el&&typeof marked!=='undefined'){
+      el.innerHTML='<div class="md-content">'+marked.parse(rawText)+'</div>';
+      el.scrollTop=el.scrollHeight;
+    }
+  },150);
+}
+
 /* ============================================================ 生成 (SSE流式) ============================================================ */
 async function generate(){
   if(generating||!currentData) return;
   generating=true;
+  const showThinking=thinkingEnabled;
   const btn=document.getElementById('genBtn');
   const btnText=document.getElementById('genBtnText');
+  const thinkToggle=document.getElementById('thinkToggle');
   btn.disabled=true;
+  thinkToggle.disabled=true;
   btnText.innerHTML='<span style="display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite"></span> 生成中...';
 
   // 显示引擎区
   document.getElementById('engineIdle').style.display='none';
   document.getElementById('statusLog').style.display='block';
-  document.getElementById('thinkingChain').style.display='block';
-  document.getElementById('thinkingChain').innerHTML='';
+  document.getElementById('dualPanel').style.display='flex';
+  document.getElementById('panelThinking').style.display=showThinking?'':'none';
+  document.getElementById('thinkingBody').innerHTML='';
+  document.getElementById('outputBody').innerHTML='';
   document.getElementById('menuOut').style.display='none';
   document.getElementById('pkgCard').style.display='none';
   document.getElementById('reachCard').style.display='none';
   document.getElementById('valueCard').style.display='none';
   document.getElementById('engineStatus').textContent='生成中...';
+  document.getElementById('thinkingBadge').textContent='等待思考...';
+  document.getElementById('outputBadge').textContent='等待生成';
 
   const statusLog=document.getElementById('statusLog');
-  const chain=document.getElementById('thinkingChain');
+  let thinkingText='';
+  let outputText='';
 
   try{
     const resp=await fetch('/api/generate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({data:currentData}),
+      body:JSON.stringify({data:currentData,enable_thinking:showThinking}),
     });
 
     const reader=resp.body.getReader();
     const decoder=new TextDecoder();
     let buffer='';
-    let chainText='';
 
     while(true){
       const{done,value}=await reader.read();
@@ -499,22 +611,31 @@ async function generate(){
           if(evt.type==='status'){
             statusLog.innerHTML+=`<div class="status-log"><span class="spinner"></span>${evt.content}</div>`;
             statusLog.scrollTop=statusLog.scrollHeight;
+          }else if(evt.type==='thinking'&&showThinking){
+            thinkingText+=evt.content;
+            document.getElementById('thinkingBadge').textContent='思考中...';
+            renderMarkdown('thinkingBody',thinkingText);
           }else if(evt.type==='token'){
-            chainText+=evt.content;
-            chain.innerHTML=chainText+'<span class="cursor"></span>';
-            chain.scrollTop=chain.scrollHeight;
+            outputText+=evt.content;
+            document.getElementById('outputBadge').textContent='生成中...';
+            renderMarkdown('outputBody',outputText);
           }else if(evt.type==='done'){
             const result=evt.content;
             currentResult=result.result;
             recipeUrls=result.recipe_urls||{};
+            // 最终 Markdown 渲染
+            if(showThinking&&thinkingText) renderMarkdown('thinkingBody',thinkingText);
+            if(outputText) renderMarkdown('outputBody',outputText);
+            if(showThinking) document.getElementById('thinkingBadge').textContent='完成';
+            document.getElementById('outputBadge').textContent='完成';
             renderResult(result);
             document.getElementById('engineStatus').textContent='✅ 生成完成';
-            statusLog.innerHTML+=`<div class="status-log" style="color:var(--green)">✅ ${evt.content.mock_mode?'Mock模式':''} 生成完成 · Memory: ${evt.content.memory_count}条</div>`;
-            // 移除光标
-            chain.innerHTML=chainText;
+            statusLog.innerHTML+=`<div class="status-log" style="color:var(--green)">✅ ${result.mock_mode?'Mock模式':''} 生成完成 · Memory: ${result.memory_count}条</div>`;
           }else if(evt.type==='error'){
             statusLog.innerHTML+=`<div class="status-log" style="color:var(--red)">❌ ${evt.content}</div>`;
             document.getElementById('engineStatus').textContent='错误';
+            if(showThinking) document.getElementById('thinkingBadge').textContent='错误';
+            document.getElementById('outputBadge').textContent='错误';
           }
         }catch(e){}
       }
@@ -524,6 +645,7 @@ async function generate(){
   }finally{
     generating=false;
     btn.disabled=false;
+    thinkToggle.disabled=false;
     btnText.textContent='重新生成';
   }
 }
@@ -614,13 +736,6 @@ function openRecipe(idx){
   const recipe=d.recipe||{};
   const url=recipeUrls[d.dish]||'';
 
-  // 生成二维码
-  let qrSvg='';
-  if(url){
-    const qr=QRGen.generate(url);
-    qrSvg=QRGen.toSVG(qr.matrix,qr.size);
-  }
-
   const ingredients=(d.ingredients||[]).map(ing=>`<tr><td>${ing.name}</td><td>${ing.amount}</td><td style="font-size:11px;color:var(--ink3)">${ing.note||''}</td></tr>`).join('');
   const steps=(recipe.steps||[]).map(s=>`<li>${s}</li>`).join('');
 
@@ -630,8 +745,25 @@ function openRecipe(idx){
     <div class="rm-section"><h4>🥬 食材清单</h4><table class="rm-ingr-table">${ingredients}</table></div>
     <div class="rm-section"><h4>👩‍🍳 制作步骤</h4><ol class="rm-steps">${steps}</ol></div>
     <div class="rm-section"><h4>💡 小贴士</h4><div class="rm-tips">${recipe.tips||''}</div></div>
-    ${url?`<div class="rm-qr"><div class="rm-qr-img">${qrSvg}</div><div class="rm-qr-info"><h5>📱 扫码查看菜谱</h5><p>手机扫码即可打开云端菜谱页面，可收藏分享</p><div class="rm-qr-url">${url}</div></div></div>`:''}
+    ${url?`<div class="rm-qr"><div class="rm-qr-img" id="qrContainer"></div><div class="rm-qr-info"><h5>📱 扫码查看菜谱</h5><p>手机扫码即可打开云端菜谱页面，可收藏分享</p><div class="rm-qr-url">${url}</div></div></div>`:''}
   `;
+
+  // 使用 qrcodejs 生成二维码
+  if(url){
+    const container=document.getElementById('qrContainer');
+    if(container){
+      container.innerHTML=''; // 清空旧内容
+      new QRCode(container,{
+        text:url,
+        width:140,
+        height:140,
+        colorDark:"#000000",
+        colorLight:"#ffffff",
+        correctLevel:QRCode.CorrectLevel.M
+      });
+    }
+  }
+
   document.getElementById('recipeModal').classList.add('show');
   document.body.style.overflow='hidden';
 }

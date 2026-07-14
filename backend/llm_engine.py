@@ -48,13 +48,14 @@ class LLMEngine:
     def is_real_mode(self) -> bool:
         return self.client is not None
 
-    async def generate(self, input_data: dict) -> AsyncGenerator[str, None]:
+    async def generate(self, input_data: dict, enable_thinking: bool = True) -> AsyncGenerator[str, None]:
         """
         主生成流程 —— 异步生成器，yield SSE 格式的事件字符串
 
         事件类型:
           - status: 状态更新（"正在检索Memory..."等）
-          - token: LLM 输出的文本片段（推理过程）
+          - thinking: LLM 深度思考输出（reasoning_content）
+          - token: LLM 正文输出（content）
           - done: 生成完成，携带结构化结果
           - error: 错误信息
         """
@@ -81,19 +82,28 @@ class LLMEngine:
 
             # ===== Step 3: LLM 调用 =====
             if self.is_real_mode:
-                yield self._sse("status", f"正在调用 LLM ({config.LLM_MODEL}) 生成中...")
-                yield self._sse("status", "━━━ 推理过程 ━━━")
+                mode_label = "深度思考" if enable_thinking else "标准模式"
+                yield self._sse("status", f"正在调用 LLM ({config.LLM_MODEL} · {mode_label}) 生成中...")
+                raw_thinking = ""
                 raw_output = ""
-                async for token in self._call_llm_stream(system_prompt, full_user_prompt):
-                    raw_output += token
-                    yield self._sse("token", token)
+                async for evt_type, token in self._call_llm_stream(system_prompt, full_user_prompt, enable_thinking):
+                    if evt_type == "thinking" and enable_thinking:
+                        raw_thinking += token
+                        yield self._sse("thinking", token)
+                    else:
+                        raw_output += token
+                        yield self._sse("token", token)
             else:
                 yield self._sse("status", "⚠️ Mock 模式（未配置 LLM API Key）—— 使用模拟生成")
-                yield self._sse("status", "━━━ 推理过程（模拟）━━━")
+                raw_thinking = ""
                 raw_output = ""
-                async for token in self._mock_generate(input_data):
-                    raw_output += token
-                    yield self._sse("token", token)
+                async for evt_type, token in self._mock_generate(input_data, enable_thinking):
+                    if evt_type == "thinking" and enable_thinking:
+                        raw_thinking += token
+                        yield self._sse("thinking", token)
+                    else:
+                        raw_output += token
+                        yield self._sse("token", token)
 
             # ===== Step 4: 输出解析 =====
             yield self._sse("status", "LLM 生成完成，正在解析结构化输出...")
@@ -127,6 +137,7 @@ class LLMEngine:
             yield self._sse("done", {
                 "result": result,
                 "recipe_urls": recipe_urls,
+                "raw_thinking": raw_thinking,
                 "raw_output": raw_output,
                 "memory_count": self.memory.count(),
                 "mock_mode": not self.is_real_mode,
@@ -137,31 +148,42 @@ class LLMEngine:
             tb = traceback.format_exc()
             yield self._sse("error", f"生成过程出错: {str(e)}\n{tb}")
 
-    async def _call_llm_stream(self, system_prompt: str, user_prompt: str) -> AsyncGenerator[str, None]:
-        """流式调用 LLM API，逐 token 返回"""
-        response = self.client.chat.completions.create(
+    async def _call_llm_stream(self, system_prompt: str, user_prompt: str, enable_thinking: bool = True) -> AsyncGenerator[tuple, None]:
+        """流式调用 LLM API，逐 token 返回 (type, token) 元组
+        type: "thinking" (reasoning_content) 或 "token" (content)
+        """
+        kwargs = dict(
             model=config.LLM_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            extra_body={"enable_thinking": True},
             stream=True,
             temperature=0.7,
-            max_tokens=4096,
+            max_tokens=8192,
         )
+        if enable_thinking:
+            kwargs["extra_body"] = {"enable_thinking": True}
+
+        response = self.client.chat.completions.create(**kwargs)
 
         for chunk in response:
-            if chunk.choices and chunk.choices[0].delta.content:
-                content = chunk.choices[0].delta.content
-                yield content
-                # 允许其他协程运行
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta
+            # 深度思考内容
+            if enable_thinking and hasattr(delta, "reasoning_content") and delta.reasoning_content:
+                yield ("thinking", delta.reasoning_content)
+                await asyncio.sleep(0.01)
+            # 正文内容
+            if delta.content:
+                yield ("token", delta.content)
                 await asyncio.sleep(0.01)
 
-    async def _mock_generate(self, input_data: dict) -> AsyncGenerator[str, None]:
+    async def _mock_generate(self, input_data: dict, enable_thinking: bool = True) -> AsyncGenerator[tuple, None]:
         """
         Mock 模式：基于输入数据生成模拟推理过程和结果
-        用于无 API Key 时的测试调试
+        返回 (type, token) 元组，与真实模式一致
         """
         inventory = input_data.get("inventory", [])
         expiring = [item for item in inventory if item.get("status") == "临期"]
@@ -214,10 +236,18 @@ class LLMEngine:
 ```
 """
 
-        # 逐字符流式输出（模拟真实 LLM 的流式效果）
-        for char in mock_text:
-            yield char
-            await asyncio.sleep(0.015)
+        # 分离思维链和正文，逐字符流式输出
+        split_marker = "【生成结果】"
+        thinking_part, _, output_part = mock_text.partition(split_marker)
+        output_part = "【生成结果】" + output_part
+
+        if enable_thinking:
+            for char in thinking_part:
+                yield ("thinking", char)
+                await asyncio.sleep(0.012)
+        for char in output_part:
+            yield ("token", char)
+            await asyncio.sleep(0.012)
 
     def _suggest_dishes_mock(self, expiring: list, high_stock: list) -> list:
         """基于临期/高库存商品推测菜谱（Mock 模式用）"""
@@ -348,8 +378,8 @@ class LLMEngine:
         for i, menu in enumerate(result.get("menus", [])):
             dish_name = menu.get("dish", f"dish_{i}")
             recipe = menu.get("recipe", {})
-            safe_name = re.sub(r"[^\w\u4e00-\u9fff]", "_", dish_name)
-            filename = f"{i}_{safe_name}.html"
+            # 文件名只用ASCII，避免URL含中文导致二维码编码过长
+            filename = f"recipe_{i}.html"
             filepath = config.RECIPES_DIR / filename
 
             html = self._build_recipe_html(menu, store_name, result.get("scenario_tag", ""))

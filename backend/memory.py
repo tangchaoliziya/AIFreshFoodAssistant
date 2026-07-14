@@ -192,4 +192,3 @@ class MemoryStore:
         conn.commit()
         conn.close()
         return count
-        return count
