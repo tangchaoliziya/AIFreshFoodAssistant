@@ -142,7 +142,84 @@ python run.py --seed
 python run.py --port 8080
 ```
 
-### 5. 访问
+### 5. 使用 Docker 部署主应用
+
+`Dockerfile` 只打包 FastAPI 主应用；它不会、也不应包含
+`.tmp/AIFreshFoodAssistant-mcp-dev` 中的开发假数据和 MCP 服务。镜像以非 root
+用户运行，并将上传数据、SQLite Memory 和生成菜谱分别保存在 Docker 卷中。
+
+在云服务器项目根目录执行：
+
+```bash
+docker build -t aifreshfoodassistant:latest .
+
+docker run -d \
+    --name aifreshfoodassistant \
+    --restart unless-stopped \
+    --env-file /opt/aifreshfoodassistant/app.env \
+    -p 8000:8000 \
+    -v aifreshfood-data:/app/data \
+    -v aifreshfood-memory:/app/memory \
+    -v aifreshfood-recipes:/app/recipes \
+    aifreshfoodassistant:latest
+
+curl -fsS http://127.0.0.1:8000/api/health
+```
+
+`/opt/aifreshfoodassistant/app.env` 至少应配置公网菜谱地址与 LLM；例如：
+
+```dotenv
+SERVER_URL=https://app.example.com
+LLM_API_KEY=your-api-key
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_MODEL=gpt-4o
+MCP_ENABLED=false
+```
+
+若不启用 MCP，主应用可正常使用 JSON/CSV 输入生成方案，无需额外部署 MCP 服务。
+若设置 `MCP_ENABLED=true`，则必须额外部署或接入一个实现
+`get_inventory`、`get_sales_history`、`get_current_prices` 三个只读工具的 MCP 服务；
+并配置其可访问的 HTTPS 地址和鉴权信息：
+
+```dotenv
+MCP_ENABLED=true
+MCP_REQUIRED=true
+MCP_SERVER_URL=https://mcp.example.com/mcp
+MCP_AUTH_TOKEN=your-mcp-token
+```
+
+对于部署在其他主机或其他网络中的 MCP 服务，客户端只允许 HTTPS 地址。若主应用与
+MCP 服务部署在同一台 Linux 云服务器上，可使用仓库提供的
+`docker-compose.cloud.yml`：两个容器使用 host 网络，MCP 保持仅监听宿主机
+`127.0.0.1:8765`，主应用以回环地址访问它，不会暴露 MCP 端口到公网。`MCP_REQUIRED=true`
+时，任一 MCP 查询失败都会中止生成且不会保存方案。
+
+### 6. 在同一 Linux 云服务器部署开发 MCP 服务
+
+本仓库的 `.tmp/AIFreshFoodAssistant-mcp-dev` 是带有确定性假数据的开发服务，所有
+返回均标记为 `development-fake-sqlite`，不能用于真实生产经营决策。它通过专用
+Dockerfile 构建为独立容器，主应用和 MCP 服务仍是两个独立进程。
+
+该方案适用于 Linux Docker Engine，不适用于 Docker Desktop 的 Windows/macOS host
+网络模式。服务器 `49.232.193.14` 上执行：
+
+```bash
+cd /opt/AIFreshFoodAssistant
+cp deploy/app.env.example deploy/app.env
+# 编辑 deploy/app.env，设置真实 LLM_API_KEY
+docker compose -f docker-compose.cloud.yml up -d --build
+
+curl -fsS http://127.0.0.1:8000/api/health
+docker compose -f docker-compose.cloud.yml ps
+docker compose -f docker-compose.cloud.yml logs -f mcp-dev
+```
+
+Compose 中不发布 `8765` 端口：MCP 仅绑定 `127.0.0.1:8765`，云安全组也无需开放它。
+只需在安全组和服务器防火墙中开放主应用的 TCP `8000`；随后浏览器访问
+`http://49.232.193.14:8000`。接入域名和 HTTPS 反向代理后，将
+`SERVER_URL` 改为对应的 `https://` 域名。
+
+### 7. 访问
 
 浏览器打开 `http://localhost:8080`。
 
