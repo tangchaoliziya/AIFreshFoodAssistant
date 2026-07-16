@@ -104,6 +104,15 @@ async def recommendation_history():
     return FileResponse(str(page_path))
 
 
+@app.get("/recipe-images")
+async def recipe_images():
+    """菜谱图片展示与下载页"""
+    page_path = config.FRONTEND_DIR / "recipe-images.html"
+    if not page_path.exists():
+        raise HTTPException(404, "前端文件未找到")
+    return FileResponse(str(page_path))
+
+
 @app.get("/api/health")
 async def health():
     """健康检查"""

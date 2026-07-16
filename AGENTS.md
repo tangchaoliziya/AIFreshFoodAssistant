@@ -13,7 +13,7 @@
 - `backend/llm_engine.py` 编排 Memory 检索、提示词、流式 LLM、JSON 解析、菜谱 HTML 部署和当前方案保存。
 - `backend/agent.py` 负责有界多步经营数据流程；`backend/mcp_client.py` 只实现受限 MCP 客户端。共享开发数据库、种子数据和 MCP 服务端代码固定放在 `.tmp/AIFreshFoodAssistant-mcp-dev/`，不得混入应用运行包；该目录中的源码、锁文件和确定性 SQLite fixture 需要纳入版本控制，本地 `.venv` 与缓存除外。
 - `backend/skills.py` 定义模型输出契约。变更输出字段时，同步修改提示词、Mock 结果、解析逻辑和前端渲染。
-- `frontend/` 是独立的原生 HTML/CSS/JavaScript 页面，不是 React 项目。页面通过 `fetch` 调用 API，Dmall 与决策大屏从 `plan_id` 查询参数读取方案。
+- `frontend/` 是独立的原生 HTML/CSS/JavaScript 页面，不是 React 项目。页面通过 `fetch` 调用 API，Dmall、决策大屏与菜谱图片页从 `plan_id` 查询参数读取方案。
 
 ## 数据不变量
 

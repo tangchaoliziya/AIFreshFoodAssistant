@@ -24,6 +24,7 @@ AIFreshFoodAssistant/
 │   ├── dmall-member.html       # Dmall 会员 App 模拟推送页
 │   ├── store-dashboard.html    # 门店负责人决策大屏
 │   ├── recommendation-history.html # 历史推荐方案管理页
+│   ├── recipe-images.html      # 菜谱图片展示与下载页
 │   ├── marked.min.js
 │   └── qrcode.min.js
 ├── data/                       # 测试数据

@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#21342c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏪</text></svg>">
 <title>门店负责人决策大屏</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -17,11 +19,13 @@ button{font:inherit;cursor:pointer;border:0}.topbar{display:flex;align-items:cen
 </style>
 </head>
 <body>
-<main class="shell"><header class="topbar"><div class="brand"><div class="brand-mark">🏪</div><div><h1>门店负责人决策大屏</h1><p>AI 社区餐桌预测引擎 · 方案执行确认</p></div></div><button class="back-btn" onclick="history.back()">返回运营驾驶舱</button></header><div id="dashboard"><div class="error">正在加载今日推荐方案...</div></div></main>
+<main class="shell"><header class="topbar"><div class="brand"><div class="brand-mark">🏪</div><div><h1>门店负责人决策大屏</h1><p>AI 社区餐桌预测引擎 · 方案执行确认</p></div></div><button class="back-btn" onclick="goBack()">返回运营驾驶舱</button></header><div id="dashboard"><div class="error">正在加载今日推荐方案...</div></div></main>
 <script>
 const planId=new URLSearchParams(location.search).get('plan_id');
 const escapeHtml=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
 let activePlan=null;
+
+function goBack(){if(history.length>1){history.back();}else{location.href='/';}}
 
 function decisionLabel(decision){return decision==='accepted'?'已接受执行':decision==='rejected'?'已拒绝执行':'待负责人确认';}
 function mapLabel(value,fallback){return escapeHtml(value||fallback);}
@@ -37,15 +41,24 @@ function renderDashboard(plan){
     <div class="panel"><div class="panel-head"><h3>建议陈列图</h3><span>门店动线</span></div><div class="panel-body"><div class="display-map"><div class="map-label map-entry">入口<br>${mapLabel(map.entrance,'场景包入口')}</div><div class="map-label map-main">主推堆头<br>${mapLabel(map.main,'今日推荐')}</div><div class="map-label map-side">配菜区<br>${mapLabel(map.side,'配菜区')}</div><div class="map-label map-cooked">熟食联动<br>${mapLabel(map.cooked,'熟食联动')}</div></div><p class="map-caption">入口引流，主推岛台承接，配菜与熟食形成连带动线。</p></div></div>
     <div class="panel"><div class="panel-head"><h3>员工执行指令</h3><span>下发后可执行</span></div><div class="panel-body"><div class="task-list">${tasks||'<div class="error">暂无员工任务</div>'}</div></div></div>
     <div class="panel"><div class="panel-head"><h3>确认执行</h3><span>决策将写入 Memory</span></div><div class="panel-body"><p style="font-size:12px;color:var(--muted)">接受后将记录为成功样例，拒绝后将记录为失败样例；未确认前不会写入 Memory。</p></div></div></section>
-    <section class="decision"><div class="decision-copy"><b>${locked?'该方案已完成决策':'是否执行当前推荐方案？'}</b><span>${locked?'当前决策已被记录，不能重复变更。':'确认后将把方案状态写入历史样例。'}</span></div><div class="decision-actions"><button class="reject" onclick="submitDecision(false)" ${locked?'disabled':''}>拒绝</button><button class="accept" onclick="submitDecision(true)" ${locked?'disabled':''}>接受并执行</button></div></section><div id="decisionMessage"></div>`;
+    <section class="decision"><div class="decision-copy"><b>${locked?'该方案已完成决策':'是否执行当前推荐方案？'}</b><span>${locked?'当前决策已被记录，不能重复变更。':'确认后将把方案状态写入历史样例。'}</span></div><div class="decision-actions"><button class="reject" onclick="submitDecision(false)" ${locked?'disabled':''}>拒绝</button><button class="accept" onclick="submitDecision(true)" ${locked?'disabled':''}>接受并执行</button></div></section><div id="decisionMessage" role="status" aria-live="polite"></div>`;
   if(locked){showDecisionMessage(decision,plan.memory_case_id,true);}
 }
 
 function showDecisionMessage(decision,memoryCaseId,existing=false){const accepted=decision==='accepted';document.getElementById('decisionMessage').innerHTML=`<div class="message ${accepted?'ok':'no'}">${accepted?'已接受并下发执行，已写入成功 Memory 样例':'已拒绝当前方案，已写入失败 Memory 样例'}${memoryCaseId?`（#${memoryCaseId}）`:''}${existing?'。':''}</div>`;}
 async function submitDecision(accepted){
-  if(!activePlan)return;document.querySelectorAll('.decision-actions button').forEach(button=>button.disabled=true);
+  if(!activePlan)return;
+  const confirmText=accepted
+    ?'确认接受并下发执行该方案？\n\n接受后将写入成功 Memory 样例，决策不可再变更。'
+    :'确认拒绝当前方案？\n\n拒绝后将写入失败 Memory 样例，决策不可再变更。';
+  if(!confirm(confirmText))return;
+  const buttons=document.querySelectorAll('.decision-actions button');
+  buttons.forEach(button=>button.disabled=true);
+  const activeButton=document.querySelector(accepted?'.accept':'.reject');
+  const originalText=activeButton?activeButton.textContent:'';
+  if(activeButton)activeButton.textContent='提交中...';
   try{const response=await fetch(`/api/recommendations/${encodeURIComponent(planId)}/decision`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accepted})});if(!response.ok)throw new Error('提交决策失败');const outcome=await response.json();activePlan.decision=outcome.decision;activePlan.memory_case_id=outcome.memory_case_id;renderDashboard(activePlan);showDecisionMessage(outcome.decision,outcome.memory_case_id,outcome.already_decided);}
-  catch(error){document.querySelectorAll('.decision-actions button').forEach(button=>button.disabled=false);document.getElementById('decisionMessage').innerHTML=`<div class="message no">${escapeHtml(error.message)}，请重试。</div>`;}
+  catch(error){buttons.forEach(button=>button.disabled=false);if(activeButton)activeButton.textContent=originalText;document.getElementById('decisionMessage').innerHTML=`<div class="message no">${escapeHtml(error.message)}，请重试。</div>`;}
 }
 async function init(){if(!planId){document.getElementById('dashboard').innerHTML='<div class="error">缺少推荐方案，请从运营驾驶舱进入。</div>';return;}try{const response=await fetch(`/api/recommendations/${encodeURIComponent(planId)}`);if(!response.ok)throw new Error('方案不存在');renderDashboard(await response.json());}catch(error){document.getElementById('dashboard').innerHTML=`<div class="error">${escapeHtml(error.message)}，请返回运营驾驶舱重新生成。</div>`;}}
 init();
